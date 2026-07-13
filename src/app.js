@@ -49,7 +49,6 @@ function bindEls() {
     flowTab: $("#flowTab"),
     heroCopy: $("#heroCopy"),
     flowCopy: $("#flowCopy"),
-    flowCards: $("#flowCards"),
     controls: $("#controls"),
     legend: $(".legend"),
     regionPills: $("#regionPills"),
@@ -569,7 +568,6 @@ function renderFlow() {
   mount.replaceChildren();
   const svg = d3.select(mount).append("svg").attr("viewBox", `0 0 ${width} ${height}`).attr("aria-hidden", "true");
   const bisect = d3.bisector((r) => parse(r.t)).center;
-  renderFlowCards(cast, rawRows);
 
   svg.append("g").selectAll("path")
     .data(layers)
@@ -602,25 +600,6 @@ function renderFlow() {
     .call((g) => g.selectAll("path,line").attr("stroke", "rgba(246,241,232,.18)"));
 
   state.flowReady = true;
-}
-
-function renderFlowCards(cast, rawRows) {
-  els.flowCards.replaceChildren();
-  const latest = rawRows[rawRows.length - 1] || {};
-  cast.slice(0, 10).forEach((article, index) => {
-    const card = document.createElement("button");
-    card.type = "button";
-    card.className = "flow-card";
-    card.style.setProperty("--flow-color", PALETTE[index % PALETTE.length]);
-    card.innerHTML = `
-      <span class="flow-card__rank">${String(index + 1).padStart(2, "0")}</span>
-      <span class="flow-card__title"></span>
-      <span class="flow-card__views">${shortNumber(latest[article.article] || article.views || 0)}</span>
-    `;
-    card.querySelector(".flow-card__title").textContent = article.title || articleTitle(article.article);
-    card.addEventListener("click", () => openArticle(article.article));
-    els.flowCards.append(card);
-  });
 }
 
 function getFlowCast() {
@@ -721,7 +700,6 @@ function setHeroView(view) {
   els.flowMount.hidden = !flow;
   els.heroCopy.hidden = flow;
   els.flowCopy.hidden = !flow;
-  els.flowCards.hidden = !flow;
   els.controls.hidden = flow;
   els.legend.hidden = flow;
   els.mapTab.classList.toggle("active", !flow);
