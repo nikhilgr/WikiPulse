@@ -551,15 +551,17 @@ function renderFlow() {
     const floorBase = Math.min(cap, Math.max(stats.median, stats.latest * .16, stats.peak * .08, 1));
     return [key, Math.pow(floorBase, .72) * .38];
   }));
-  const rows = rawRows.map((raw) => {
+  const rows = rawRows.map((raw, index) => {
     const row = { t: raw.t };
+    const progress = index / Math.max(rawRows.length - 1, 1);
+    const leftExpansion = 1 + Math.pow(Math.max(0, 1 - progress), 1.7) * .48;
     keys.forEach((key) => {
       const rawValue = raw[key];
       const stats = flowStats[key];
       const ratio = Math.min(8, rawValue / Math.max(stats.median, 1));
       const surgeLift = .74 + Math.pow(Math.max(ratio, .05), .52) * .24;
       const shaped = Math.pow(Math.min(rawValue, cap), .72) * surgeLift;
-      row[key] = displayFloors[key] + shaped * .88;
+      row[key] = (displayFloors[key] + shaped * .88) * leftExpansion;
     });
     return row;
   });
