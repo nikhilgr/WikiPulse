@@ -13,6 +13,7 @@ const REGION_LABELS = {
 const PALETTE = ["#d6361b", "#c6953a", "#6b8e6a", "#2f5d62", "#a85c8a", "#e2a93d", "#88607b", "#3a6b8a", "#b25e2a", "#5d8a6f"];
 const STOP = new Set(["about", "after", "also", "because", "between", "during", "from", "into", "over", "their", "there", "this", "that", "with", "were", "which", "while"]);
 const BAD_ARTICLE = /^(Special:|Wikipedia:|Portal:|File:|Category:|Help:|Talk:|Template:|Main_Page$|-)/;
+const FLOW_STORY_COUNT = 10;
 
 const state = {
   mode: "snapshot",
@@ -527,13 +528,14 @@ function renderFlow() {
   const rect = mount.getBoundingClientRect();
   const width = Math.max(320, rect.width);
   const height = Math.max(360, rect.height);
-  const cast = getFlowCast().slice(0, width > 700 ? 14 : 10);
+  const cast = getFlowCast().slice(0, FLOW_STORY_COUNT);
   if (cast.length < 3) return;
 
   const keys = cast.map((a) => a.article);
   const dateSet = new Set();
   keys.forEach((key) => state.seriesCache.get(key).forEach((point) => dateSet.add(point.t)));
   const dates = [...dateSet].sort();
+  const flowStats = Object.fromEntries(keys.map((key) => [key, flowSeriesStats(state.seriesCache.get(key) || [])]));
   const rawRows = dates.map((t) => {
     const row = { t };
     keys.forEach((key) => {
@@ -546,14 +548,18 @@ function renderFlow() {
   const rows = rawRows.map((raw) => {
     const row = { t: raw.t };
     keys.forEach((key) => {
-      row[key] = Math.pow(Math.min(raw[key], cap), .88);
+      const rawValue = raw[key];
+      const stats = flowStats[key];
+      const ratio = Math.min(8, rawValue / Math.max(stats.median, 1));
+      const surgeLift = .74 + Math.pow(Math.max(ratio, .05), .52) * .24;
+      row[key] = Math.pow(Math.min(rawValue, cap), .72) * surgeLift;
     });
     return row;
   });
 
   const parse = (t) => new Date(Date.UTC(+t.slice(0, 4), +t.slice(4, 6) - 1, +t.slice(6, 8)));
   const margin = {
-    top: width > 700 ? 92 : 44,
+    top: width > 700 ? 72 : 38,
     right: width > 700 ? 44 : 18,
     bottom: 42,
     left: width > 700 ? 32 : 18
@@ -565,10 +571,10 @@ function renderFlow() {
     d3.min(layers, (l) => d3.min(l, (p) => p[0])),
     d3.max(layers, (l) => d3.max(l, (p) => p[1]))
   ];
-  const yPad = Math.max(1, (yDomain[1] - yDomain[0]) * .08);
+  const yPad = Math.max(1, (yDomain[1] - yDomain[0]) * .025);
   const y = d3.scaleLinear()
     .domain([yDomain[0] - yPad, yDomain[1] + yPad])
-    .range([height - margin.bottom + (width > 700 ? 18 : 0), margin.top]);
+    .range([height - margin.bottom + (width > 700 ? 34 : 12), margin.top]);
   const area = d3.area().x((_p, i) => x(parse(rows[i].t))).y0((p) => y(p[0])).y1((p) => y(p[1])).curve(d3.curveBasis);
 
   mount.replaceChildren();
@@ -579,11 +585,16 @@ function renderFlow() {
     .data(layers)
     .enter()
     .append("path")
+    .attr("class", "flow-layer")
+    .attr("data-key", (layer) => layer.key)
     .attr("d", area)
     .attr("fill", (_d, i) => PALETTE[i % PALETTE.length])
-    .attr("opacity", .78)
+    .attr("opacity", .84)
+    .attr("stroke", "rgba(12,10,8,.42)")
+    .attr("stroke-width", .65)
+    .style("cursor", "pointer")
     .on("mousemove", function (event, layer) {
-      d3.select(this).attr("opacity", 1);
+      setFlowFocus(svg, layer.key);
       const rect = mount.getBoundingClientRect();
       const idx = Math.max(0, Math.min(rows.length - 1, bisect(rows, x.invert(event.clientX - rect.left))));
       const row = rawRows[idx];
@@ -592,7 +603,7 @@ function renderFlow() {
       showTip(els.flowTip, mount, event, `<strong>${article.title || articleTitle(layer.key)}</strong><span>${date}</span>${shortNumber(row[layer.key])} views`);
     })
     .on("mouseleave", function () {
-      d3.select(this).attr("opacity", .78);
+      clearFlowFocus(svg);
       els.flowTip.style.opacity = 0;
     })
     .on("click", (_event, layer) => openArticle(layer.key));
@@ -622,6 +633,39 @@ function renderFlow() {
 
   state.flowReady = true;
   hydrateLiveFlowSeries();
+}
+
+function flowSeriesStats(series) {
+  const values = series.map((point) => point.v).filter((value) => value > 0).sort((a, b) => a - b);
+  if (!values.length) return { median: 1, peak: 0, latest: 0, volatility: 0, surge: 1 };
+  const median = values[Math.floor(values.length / 2)] || 1;
+  const peak = values[values.length - 1] || 0;
+  const latest = series[series.length - 1]?.v || 0;
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const volatility = Math.sqrt(values.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / values.length) / Math.max(mean, 1);
+  const recentPeak = Math.max(...series.slice(-6).map((point) => point.v), latest);
+  const surge = recentPeak / Math.max(median, 1);
+  return { median, peak, latest, volatility, surge };
+}
+
+function setFlowFocus(svg, key) {
+  svg.classed("has-flow-focus", true);
+  svg.selectAll(".flow-layer")
+    .attr("opacity", (layer) => layer.key === key ? .98 : .14)
+    .attr("stroke", (layer) => layer.key === key ? "rgba(246,241,232,.78)" : "rgba(12,10,8,.25)")
+    .attr("stroke-width", (layer) => layer.key === key ? 1.35 : .45);
+  svg.selectAll(".flow-label")
+    .attr("opacity", (label) => label.key === key ? 1 : .18);
+}
+
+function clearFlowFocus(svg) {
+  svg.classed("has-flow-focus", false);
+  svg.selectAll(".flow-layer")
+    .attr("opacity", .84)
+    .attr("stroke", "rgba(12,10,8,.42)")
+    .attr("stroke-width", .65);
+  svg.selectAll(".flow-label")
+    .attr("opacity", 1);
 }
 
 async function hydrateLiveFlowSeries() {
@@ -654,13 +698,12 @@ function getFlowCast() {
   const fallback = [...state.seriesCache.entries()]
     .map(([article, series], index) => {
       const summary = state.summaryCache.get(article) || {};
-      const last = series[series.length - 1]?.v || 0;
-      const peak = Math.max(...series.map((point) => point.v));
+      const stats = flowSeriesStats(series);
       return {
         article,
         rank: index + 1,
-        views: last,
-        flowScore: peak + last,
+        views: stats.latest,
+        flowScore: flowStoryScore(stats),
         title: summary.title || articleTitle(article),
         desc: summary.desc || "",
         extract: summary.extract || "",
@@ -674,49 +717,74 @@ function getFlowCast() {
   const blended = [
     ...liveOverlap,
     ...fallback.filter((article) => !seen.has(article.article))
-  ];
+  ].map((article) => {
+    const stats = flowSeriesStats(state.seriesCache.get(article.article) || []);
+    return {
+      ...article,
+      flowScore: article.flowScore || flowStoryScore(stats)
+    };
+  }).sort((a, b) => b.flowScore - a.flowScore);
 
   return blended.length >= 5 ? blended : fallback;
+}
+
+function flowStoryScore(stats) {
+  return (stats.latest * .72) + (stats.peak * .54) + (Math.min(stats.surge, 12) * 42000) + (Math.min(stats.volatility, 3) * 65000);
 }
 
 function renderFlowLabels(svg, layers, rows, cast, x, y, parse, width) {
   const minIndex = Math.max(1, Math.floor(rows.length * .14));
   const maxIndex = Math.max(minIndex + 1, Math.floor(rows.length * .84));
-  const maxLabels = width > 900 ? 10 : 5;
+  const maxLabels = Math.min(cast.length, width > 900 ? FLOW_STORY_COUNT : 6);
   const placed = [];
   const candidates = layers.map((layer) => {
-    let best = null;
+    const perLayer = [];
     for (let i = minIndex; i <= maxIndex; i++) {
       const point = layer[i];
       const thickness = Math.abs(y(point[0]) - y(point[1]));
-      if (!best || thickness > best.thickness) {
-        best = {
-          key: layer.key,
-          x: x(parse(rows[i].t)),
-          y: (y(point[0]) + y(point[1])) / 2,
-          thickness
-        };
-      }
+      perLayer.push({
+        key: layer.key,
+        x: x(parse(rows[i].t)),
+        y: (y(point[0]) + y(point[1])) / 2,
+        thickness
+      });
     }
-    return best;
-  }).filter(Boolean).sort((a, b) => b.thickness - a.thickness);
+    return perLayer.sort((a, b) => b.thickness - a.thickness).slice(0, 8);
+  }).filter(Boolean).sort((a, b) => (b[0]?.thickness || 0) - (a[0]?.thickness || 0));
 
   const labels = [];
-  for (const candidate of candidates) {
+  for (const choices of candidates) {
     if (labels.length >= maxLabels) break;
+    const candidate = choices.find((choice) => {
+      const article = cast.find((item) => item.article === choice.key);
+      const title = article?.title || articleTitle(choice.key);
+      const fontSize = Math.max(9, Math.min(23, choice.thickness * .38));
+      const textWidth = Math.min(width * .28, title.length * fontSize * .54);
+      const box = {
+        x0: choice.x - textWidth / 2 - 8,
+        x1: choice.x + textWidth / 2 + 8,
+        y0: choice.y - fontSize,
+        y1: choice.y + fontSize
+      };
+      const inBounds = box.x0 > 16 && box.x1 < width - 16 && box.y0 > 16;
+      const collides = placed.some((other) => !(box.x1 < other.x0 || box.x0 > other.x1 || box.y1 < other.y0 || box.y0 > other.y1));
+      if (!inBounds || collides) return false;
+      choice.title = title;
+      choice.fontSize = fontSize;
+      choice.box = box;
+      return true;
+    }) || choices[0];
+    if (!candidate) continue;
     const article = cast.find((item) => item.article === candidate.key);
-    const title = article?.title || articleTitle(candidate.key);
-    const fontSize = Math.max(11, Math.min(24, candidate.thickness * .42));
-    const textWidth = Math.min(width * .34, title.length * fontSize * .55);
-    const box = {
-      x0: candidate.x - textWidth / 2 - 8,
-      x1: candidate.x + textWidth / 2 + 8,
+    const title = candidate.title || article?.title || articleTitle(candidate.key);
+    const fontSize = candidate.fontSize || 9;
+    const textWidth = Math.min(width * .24, title.length * fontSize * .5);
+    const box = candidate.box || {
+      x0: candidate.x - textWidth / 2 - 6,
+      x1: candidate.x + textWidth / 2 + 6,
       y0: candidate.y - fontSize,
       y1: candidate.y + fontSize
     };
-    const inBounds = box.x0 > 16 && box.x1 < width - 16 && box.y0 > 16;
-    const collides = placed.some((other) => !(box.x1 < other.x0 || box.x0 > other.x1 || box.y1 < other.y0 || box.y0 > other.y1));
-    if (!inBounds || collides) continue;
     placed.push(box);
     labels.push({ ...candidate, title, fontSize });
   }
@@ -726,6 +794,8 @@ function renderFlowLabels(svg, layers, rows, cast, x, y, parse, width) {
     .data(labels)
     .enter()
     .append("text")
+    .attr("class", "flow-label")
+    .attr("data-key", (d) => d.key)
     .attr("x", (d) => d.x)
     .attr("y", (d) => d.y)
     .attr("text-anchor", "middle")
@@ -737,7 +807,11 @@ function renderFlowLabels(svg, layers, rows, cast, x, y, parse, width) {
     .attr("font-family", "Fraunces, Georgia, serif")
     .attr("font-weight", 750)
     .attr("font-size", (d) => d.fontSize)
-    .text((d) => d.title);
+    .style("cursor", "pointer")
+    .text((d) => d.title)
+    .on("mousemove", function (_event, d) { setFlowFocus(svg, d.key); })
+    .on("mouseleave", function () { clearFlowFocus(svg); })
+    .on("click", (_event, d) => openArticle(d.key));
 }
 
 function setHeroView(view) {
