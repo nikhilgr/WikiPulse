@@ -50,6 +50,7 @@ function bindEls() {
     heroCopy: $("#heroCopy"),
     flowCopy: $("#flowCopy"),
     controls: $("#controls"),
+    legend: $(".legend"),
     regionPills: $("#regionPills"),
     viewName: $("#viewName"),
     resetView: $("#resetView"),
@@ -520,28 +521,47 @@ function renderFlow() {
   const rect = mount.getBoundingClientRect();
   const width = Math.max(320, rect.width);
   const height = Math.max(360, rect.height);
-  const cast = state.globalTop.slice(0, 14).filter((a) => state.seriesCache.has(a.article));
+  const cast = getFlowCast().slice(0, width > 700 ? 14 : 9);
   if (cast.length < 3) return;
 
   const keys = cast.map((a) => a.article);
   const dateSet = new Set();
   keys.forEach((key) => state.seriesCache.get(key).forEach((point) => dateSet.add(point.t)));
   const dates = [...dateSet].sort();
-  const rows = dates.map((t) => {
+  const rawRows = dates.map((t) => {
     const row = { t };
     keys.forEach((key) => {
       row[key] = state.seriesCache.get(key).find((point) => point.t === t)?.v || 0;
     });
     return row;
   });
+  const values = rawRows.flatMap((row) => keys.map((key) => row[key])).filter((value) => value > 0).sort((a, b) => a - b);
+  const cap = Math.max(1, (d3.quantile(values, .92) || d3.max(values) || 1) * 1.35);
+  const rows = rawRows.map((raw) => {
+    const row = { t: raw.t };
+    keys.forEach((key) => {
+      row[key] = Math.pow(Math.min(raw[key], cap), .62);
+    });
+    return row;
+  });
 
   const parse = (t) => new Date(Date.UTC(+t.slice(0, 4), +t.slice(4, 6) - 1, +t.slice(6, 8)));
-  const margin = { top: 18, right: 24, bottom: 34, left: 24 };
+  const margin = {
+    top: width > 700 ? 92 : 44,
+    right: width > 700 ? 44 : 18,
+    bottom: 42,
+    left: width > 700 ? 32 : 18
+  };
   const stack = d3.stack().keys(keys).order(d3.stackOrderInsideOut).offset(d3.stackOffsetWiggle);
   const layers = stack(rows);
   const x = d3.scaleUtc().domain([parse(dates[0]), parse(dates[dates.length - 1])]).range([margin.left, width - margin.right]);
+  const yDomain = [
+    d3.min(layers, (l) => d3.min(l, (p) => p[0])),
+    d3.max(layers, (l) => d3.max(l, (p) => p[1]))
+  ];
+  const yPad = Math.max(1, (yDomain[1] - yDomain[0]) * .08);
   const y = d3.scaleLinear()
-    .domain([d3.min(layers, (l) => d3.min(l, (p) => p[0])), d3.max(layers, (l) => d3.max(l, (p) => p[1]))])
+    .domain([yDomain[0] - yPad, yDomain[1] + yPad])
     .range([height - margin.bottom, margin.top]);
   const area = d3.area().x((_p, i) => x(parse(rows[i].t))).y0((p) => y(p[0])).y1((p) => y(p[1])).curve(d3.curveBasis);
 
@@ -560,7 +580,7 @@ function renderFlow() {
       d3.select(this).attr("opacity", 1);
       const rect = mount.getBoundingClientRect();
       const idx = Math.max(0, Math.min(rows.length - 1, bisect(rows, x.invert(event.clientX - rect.left))));
-      const row = rows[idx];
+      const row = rawRows[idx];
       const article = cast.find((a) => a.article === layer.key);
       const date = parse(row.t).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
       showTip(els.flowTip, mount, event, `<strong>${article.title || articleTitle(layer.key)}</strong><span>${date}</span>${shortNumber(row[layer.key])} views`);
@@ -571,6 +591,8 @@ function renderFlow() {
     })
     .on("click", (_event, layer) => openArticle(layer.key));
 
+  renderFlowLabels(svg, layers, rows, cast, x, y, parse, width);
+
   svg.append("g")
     .attr("transform", `translate(0,${height - margin.bottom})`)
     .call(d3.axisBottom(x).ticks(width > 800 ? 8 : 4).tickSizeOuter(0))
@@ -578,6 +600,91 @@ function renderFlow() {
     .call((g) => g.selectAll("path,line").attr("stroke", "rgba(246,241,232,.18)"));
 
   state.flowReady = true;
+}
+
+function getFlowCast() {
+  const liveOverlap = state.globalTop.slice(0, 24).filter((article) => state.seriesCache.has(article.article));
+  if (liveOverlap.length >= 5) return liveOverlap;
+
+  return [...state.seriesCache.entries()]
+    .map(([article, series], index) => {
+      const summary = state.summaryCache.get(article) || {};
+      const last = series[series.length - 1]?.v || 0;
+      const peak = Math.max(...series.map((point) => point.v));
+      return {
+        article,
+        rank: index + 1,
+        views: last,
+        flowScore: peak + last,
+        title: summary.title || articleTitle(article),
+        desc: summary.desc || "",
+        extract: summary.extract || "",
+        thumb: summary.thumb || "",
+        img: summary.img || ""
+      };
+    })
+    .sort((a, b) => b.flowScore - a.flowScore);
+}
+
+function renderFlowLabels(svg, layers, rows, cast, x, y, parse, width) {
+  const minIndex = Math.max(1, Math.floor(rows.length * .14));
+  const maxIndex = Math.max(minIndex + 1, Math.floor(rows.length * .84));
+  const maxLabels = width > 900 ? 8 : 4;
+  const placed = [];
+  const candidates = layers.map((layer) => {
+    let best = null;
+    for (let i = minIndex; i <= maxIndex; i++) {
+      const point = layer[i];
+      const thickness = Math.abs(y(point[0]) - y(point[1]));
+      if (!best || thickness > best.thickness) {
+        best = {
+          key: layer.key,
+          x: x(parse(rows[i].t)),
+          y: (y(point[0]) + y(point[1])) / 2,
+          thickness
+        };
+      }
+    }
+    return best;
+  }).filter(Boolean).sort((a, b) => b.thickness - a.thickness);
+
+  const labels = [];
+  for (const candidate of candidates) {
+    if (labels.length >= maxLabels) break;
+    const article = cast.find((item) => item.article === candidate.key);
+    const title = article?.title || articleTitle(candidate.key);
+    const fontSize = Math.max(11, Math.min(24, candidate.thickness * .42));
+    const textWidth = Math.min(width * .34, title.length * fontSize * .55);
+    const box = {
+      x0: candidate.x - textWidth / 2 - 8,
+      x1: candidate.x + textWidth / 2 + 8,
+      y0: candidate.y - fontSize,
+      y1: candidate.y + fontSize
+    };
+    const inBounds = box.x0 > 16 && box.x1 < width - 16 && box.y0 > 16;
+    const collides = placed.some((other) => !(box.x1 < other.x0 || box.x0 > other.x1 || box.y1 < other.y0 || box.y0 > other.y1));
+    if (!inBounds || collides) continue;
+    placed.push(box);
+    labels.push({ ...candidate, title, fontSize });
+  }
+
+  svg.append("g")
+    .selectAll("text")
+    .data(labels)
+    .enter()
+    .append("text")
+    .attr("x", (d) => d.x)
+    .attr("y", (d) => d.y)
+    .attr("text-anchor", "middle")
+    .attr("dominant-baseline", "middle")
+    .attr("fill", "#f6f1e8")
+    .attr("stroke", "rgba(12,10,8,.72)")
+    .attr("stroke-width", 5)
+    .attr("paint-order", "stroke")
+    .attr("font-family", "Fraunces, Georgia, serif")
+    .attr("font-weight", 750)
+    .attr("font-size", (d) => d.fontSize)
+    .text((d) => d.title);
 }
 
 function setHeroView(view) {
@@ -588,6 +695,7 @@ function setHeroView(view) {
   els.heroCopy.hidden = flow;
   els.flowCopy.hidden = !flow;
   els.controls.hidden = flow;
+  els.legend.hidden = flow;
   els.mapTab.classList.toggle("active", !flow);
   els.flowTab.classList.toggle("active", flow);
   els.mapTab.setAttribute("aria-selected", String(!flow));
