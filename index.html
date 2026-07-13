@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#14110f">
+    <meta name="description" content="WikiPulse shows the cultural pulse of Wikipedia across countries, articles, and daily readership surges.">
+    <title>WikiPulse - what is the world reading?</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/styles.css">
+    <script src="/vendor/d3.v7.min.js" defer></script>
+    <script src="/vendor/topojson-client.min.js" defer></script>
+    <script src="/data/geo.js" defer></script>
+    <script src="/src/app.js" defer></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="nameplate" href="#top" aria-label="WikiPulse home">Wiki<span>Pulse</span></a>
+      <div class="masthead__meta" aria-live="polite">
+        <span class="live"><i></i><span id="modeLabel">Loading</span></span>
+        <span id="dateLine">Preparing edition</span>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="heroTitle">
+        <div id="mapMount" class="hero__map" aria-label="Interactive world map"></div>
+        <div id="flowMount" class="hero__flow" aria-label="Thirty day readership streamgraph" hidden></div>
+        <div id="mapTip" class="tip" role="status"></div>
+        <div id="flowTip" class="tip" role="status"></div>
+        <div class="vignette"></div>
+
+        <div class="view-toggle" role="tablist" aria-label="Hero view">
+          <button id="mapTab" class="active" type="button" role="tab" aria-selected="true">Map</button>
+          <button id="flowTab" type="button" role="tab" aria-selected="false">Flow</button>
+        </div>
+
+        <div id="heroCopy" class="hero-card">
+          <p class="kicker">The cultural pulse of Wikipedia</p>
+          <h1 id="heroTitle">What is the <em>world</em> reading right now?</h1>
+          <p>Click a country to see what its readers are following. Zoom back out for the global pulse.</p>
+          <dl class="stats">
+            <div><dt>Pageviews</dt><dd id="statTotal">-</dd></div>
+            <div><dt>Articles</dt><dd id="statArticles">-</dd></div>
+            <div><dt>Window</dt><dd>24h</dd></div>
+          </dl>
+        </div>
+
+        <div id="flowCopy" class="flow-copy" hidden>
+          <p class="kicker">Thirty days of attention</p>
+          <h2>Every river is a story the <em>world</em> is reading.</h2>
+        </div>
+
+        <div id="controls" class="controls">
+          <div id="regionPills" class="pills" aria-label="Filter map by region"></div>
+          <div class="view-chip">
+            <span>Viewing</span>
+            <strong id="viewName">Global</strong>
+            <button id="resetView" type="button" aria-label="Back to global">x</button>
+          </div>
+        </div>
+
+        <div class="legend" aria-hidden="true">
+          <span><i class="loaded"></i>Snapshot</span>
+          <span><i class="empty"></i>Available</span>
+          <span><i class="hover"></i>Hover</span>
+          <span><i class="selected"></i>Selected</span>
+        </div>
+      </section>
+
+      <section class="grid-section" aria-labelledby="gridTitle">
+        <div class="grid-heading">
+          <div>
+            <h2 id="gridTitle">What's surging <em id="contextLabel">globally</em></h2>
+            <p>Open any story to see summaries, related surges, and recent readership movement.</p>
+          </div>
+          <span id="gridStatus">Loading Wikipedia pulse</span>
+        </div>
+        <div id="articles" class="articles" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <aside id="panel" class="panel" aria-labelledby="panelTitle" aria-hidden="true">
+      <div class="panel__bar">
+        <button id="closePanel" type="button">Back to the pulse</button>
+        <span id="panelContext">Global</span>
+      </div>
+      <div id="panelImage" class="panel__image"><span id="panelLetter">W</span></div>
+      <div class="panel__body">
+        <p id="panelKicker" class="kicker">Trending</p>
+        <h2 id="panelTitle">Loading</h2>
+        <p id="panelDesc" class="panel__desc"></p>
+        <section class="pulse-box" aria-labelledby="pulseTitle">
+          <h3 id="pulseTitle">Readership over time</h3>
+          <p id="panelWhy">Reading the pulse...</p>
+          <svg id="spark" viewBox="0 0 440 72" preserveAspectRatio="none" hidden>
+            <path id="sparkArea"></path>
+            <path id="sparkLine"></path>
+          </svg>
+        </section>
+        <dl class="panel__meta">
+          <div><dt>Views in 24h</dt><dd id="panelViews">-</dd></div>
+          <div><dt>Rank</dt><dd id="panelRank">-</dd></div>
+          <div><dt>Trend</dt><dd id="panelTrend">-</dd></div>
+        </dl>
+        <div id="relatedWrap" class="related" hidden>
+          <h3>Surging alongside it</h3>
+          <div id="related"></div>
+        </div>
+        <p id="panelExtract" class="extract"></p>
+        <a id="panelLink" class="read-more" href="https://en.wikipedia.org" target="_blank" rel="noopener">Read on Wikipedia</a>
+      </div>
+    </aside>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <footer>
+      <strong>Wiki<span>Pulse</span></strong>
+      <p>Data and content from Wikipedia under CC BY-SA 4.0. Not affiliated with the Wikimedia Foundation.</p>
+    </footer>
+  </body>
+</html>

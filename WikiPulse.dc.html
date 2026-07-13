@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&amp;family=Inter:ital,wght@0,400..700;1,400..700&amp;display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #f6f1e8; color: #14110f; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #d6361b; text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+    a:hover { color: #14110f; }
+    @keyframes wp-pulse { 0% { box-shadow: 0 0 0 0 rgba(214,54,27,0.55); } 70% { box-shadow: 0 0 0 10px rgba(214,54,27,0); } 100% { box-shadow: 0 0 0 0 rgba(214,54,27,0); } }
+    @keyframes wp-bob { 0%, 100% { transform: translateY(0); opacity: 0.6; } 50% { transform: translateY(6px); opacity: 1; } }
+    @keyframes wp-bounce { 0%, 80%, 100% { transform: scale(0.4); opacity: 0.3; } 40% { transform: scale(1); opacity: 1; } }
+    @keyframes wp-shimmer { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+  </style>
+  <script src="vendor/d3.v7.min.js"></script>
+  <script src="vendor/topojson-client.min.js"></script>
+  <script src="data/geo.js"></script>
+</helmet>
+
+<header data-screen-label="Masthead" style="height: 64px; padding: 0 clamp(16px, 3vw, 32px); border-bottom: 1px solid #1a1714; display: flex; align-items: center; justify-content: space-between; gap: 24px; position: sticky; top: 0; z-index: 80; background: #f6f1e8;">
+  <div style="font-family: 'Fraunces', serif; font-weight: 900; font-size: clamp(22px, 2.4vw, 28px); letter-spacing: -1px; line-height: 1; font-variation-settings: 'opsz' 144;">Wiki<span style="color: #d6361b;">Pulse</span></div>
+  <div style="display: flex; gap: clamp(10px, 1.6vw, 18px); align-items: center; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #6b5f50; font-weight: 600;">
+    <span style="color: #d6361b; font-weight: 700; display: flex; align-items: center; gap: 6px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #d6361b; display: inline-block; animation: wp-pulse 1.8s infinite;"></span>{{ liveLabel }}</span>
+    <span style="color: #14110f; font-weight: 700;">{{ dateline }}</span>
+    
+  </div>
+</header>
+
+<section data-screen-label="The World — map" style="position: relative; width: 100%; height: calc(100vh - 64px); min-height: 560px; background: #0c0a08; overflow: hidden; border-bottom: 1px solid #1a1714;">
+  <div ref="{{ mapMount }}" style="position: absolute; inset: 0; cursor: crosshair; opacity: {{ mapOpacity }}; pointer-events: {{ mapEvents }}; transition: opacity 0.3s ease;"></div>
+  <div ref="{{ streamMount }}" style="position: absolute; inset: 78px 0 40px 0; opacity: {{ streamOpacity }}; pointer-events: {{ streamEvents }}; transition: opacity 0.3s ease;"></div>
+  <div ref="{{ streamTipRef }}" style="position: absolute; background: #f6f1e8; color: #14110f; padding: 10px 14px; border-radius: 4px; font-family: 'Fraunces', serif; pointer-events: none; opacity: 0; transition: opacity 0.12s; max-width: 280px; box-shadow: 0 12px 36px rgba(0,0,0,0.5); z-index: 6;"></div>
+  <div style="position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%);"></div>
+
+  <div style="position: absolute; top: 20px; left: clamp(16px, 3.4vw, 48px); z-index: 6; display: inline-flex; padding: 5px; gap: 4px; background: rgba(20,17,15,0.66); backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%); border: 1px solid rgba(246,241,232,0.10); border-radius: 24px; box-shadow: 0 24px 60px rgba(0,0,0,0.45);">
+    <button onClick="{{ showMap }}" style="border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; padding: 8px 20px; border-radius: 20px; background: {{ mapTabBg }}; color: {{ mapTabFg }}; transition: background 0.18s ease, color 0.18s ease;">Map</button>
+    <button onClick="{{ showFlow }}" style="border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; padding: 8px 20px; border-radius: 20px; background: {{ flowTabBg }}; color: {{ flowTabFg }}; transition: background 0.18s ease, color 0.18s ease;">Flow</button>
+  </div>
+
+  <div style="position: absolute; top: 78px; left: clamp(16px, 3.4vw, 48px); z-index: 5; max-width: min(560px, calc(100vw - 32px)); display: {{ flowCaptionDisplay }}; pointer-events: none;">
+    <div style="font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: #d6361b; font-weight: 700; margin-bottom: 10px;">The Pulse · thirty days of attention</div>
+    <h1 style="font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(28px, 3.6vw, 46px); line-height: 1.0; letter-spacing: -1.4px; color: #f6f1e8; margin: 0; font-variation-settings: 'opsz' 144;">Every river is a story the <em style="font-style: italic; font-weight: 500; color: #d6361b;">world</em> is reading.</h1>
+  </div>
+
+  <div style="position: absolute; top: 50%; left: clamp(16px, 3.4vw, 48px); transform: translateY(-50%); max-width: min(520px, calc(100vw - 32px)); padding: clamp(22px, 3vw, 40px) clamp(22px, 3vw, 40px) clamp(18px, 2.4vw, 32px); background: rgba(20,17,15,0.66); backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%); border: 1px solid rgba(246,241,232,0.10); border-radius: 8px; color: #f6f1e8; z-index: 4; box-shadow: 0 24px 60px rgba(0,0,0,0.45); display: {{ heroCardDisplay }};">
+    <div style="font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: #d6361b; font-weight: 700; margin-bottom: 16px;">THE CULTURAL PULSE OF WIKIPEDIA</div>
+    <h1 style="font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(34px, 4.6vw, 64px); line-height: 0.95; letter-spacing: -2px; font-variation-settings: 'opsz' 144; margin: 0 0 22px;">What is the <em style="font-style: italic; font-weight: 500; color: #d6361b;">world</em> reading right now?</h1>
+    <p style="font-family: 'Fraunces', serif; font-size: clamp(14px, 1.3vw, 16px); line-height: 1.5; color: rgba(246,241,232,0.84); margin: 0 0 24px; max-width: 42ch;">Click any country to see what its citizens are reading.</p>
+    <div style="display: flex; gap: 28px; flex-wrap: wrap; padding-top: 22px; border-top: 1px solid rgba(246,241,232,0.12); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(246,241,232,0.55); font-weight: 600;">
+      <div><b style="display: block; font-family: 'Fraunces', serif; font-weight: 700; font-size: 24px; letter-spacing: -0.3px; color: #f6f1e8; text-transform: none; margin-bottom: 2px;">{{ statTotal }}</b>Pageviews</div>
+      <div><b style="display: block; font-family: 'Fraunces', serif; font-weight: 700; font-size: 24px; letter-spacing: -0.3px; color: #f6f1e8; text-transform: none; margin-bottom: 2px;">{{ statArticles }}</b>Articles</div>
+      <div><b style="display: block; font-family: 'Fraunces', serif; font-weight: 700; font-size: 24px; letter-spacing: -0.3px; color: #f6f1e8; text-transform: none; margin-bottom: 2px;">24h</b>Window</div>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 20px; right: clamp(12px, 2vw, 28px); padding: 16px 18px; display: {{ controlsDisplay }}; flex-direction: column; gap: 12px; max-width: 360px; background: rgba(20,17,15,0.66); backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%); border: 1px solid rgba(246,241,232,0.10); border-radius: 8px; z-index: 4; box-shadow: 0 24px 60px rgba(0,0,0,0.45);">
+    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+      <sc-for list="{{ regions }}" as="r" hint-placeholder-count="6">
+        <button onClick="{{ r.pick }}" style="background: {{ r.bg }}; color: {{ r.fg }}; padding: 6px 12px; border-radius: 20px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; cursor: pointer; border: 1px solid transparent; font-family: 'Inter', sans-serif; transition: background 0.15s ease, color 0.15s ease;" style-hover="background: rgba(246,241,232,0.2);">{{ r.label }}</button>
+      </sc-for>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; background: #f6f1e8; color: #14110f; padding: 8px 8px 8px 14px; border-radius: 24px; font-size: 11px; letter-spacing: 0.06em; font-weight: 600;">
+      <span style="font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: #6b5f50;">Viewing</span>
+      <span style="font-family: 'Fraunces', serif; font-size: 13px; font-weight: 700; letter-spacing: -0.2px; color: {{ viewNameColor }};">{{ viewName }}</span>
+      <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ resetView }}" style="background: #14110f; color: #f6f1e8; border: none; width: 22px; height: 22px; border-radius: 50%; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center;" style-hover="background: #d6361b;">×</button>
+      </sc-if>
+    </div>
+  </div>
+
+  <div style="position: absolute; bottom: 28px; left: 48px; padding: 12px 16px; display: {{ legendDisplay }}; gap: 16px; align-items: center; font-size: 10px; color: rgba(246,241,232,0.66); letter-spacing: 0.08em; background: rgba(20,17,15,0.66); backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%); border: 1px solid rgba(246,241,232,0.10); border-radius: 8px; z-index: 4;">
+    <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; background: rgba(246,241,232,0.16);"></span>Pre-loaded</span>
+    <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; background: rgba(246,241,232,0.05); border: 1px solid rgba(246,241,232,0.2);"></span>Click to load</span>
+    <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; background: #f0a48a;"></span>Hover</span>
+    <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; background: #d6361b;"></span>Selected</span>
+  </div>
+
+  <div ref="{{ mapTipRef }}" style="position: absolute; background: #f6f1e8; color: #14110f; padding: 12px 16px; border-radius: 4px; font-family: 'Fraunces', serif; pointer-events: none; opacity: 0; transition: opacity 0.12s; max-width: 300px; box-shadow: 0 12px 36px rgba(0,0,0,0.5); z-index: 6;"></div>
+
+  <div style="position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); font-family: 'Fraunces', serif; font-style: italic; font-size: 15px; color: rgba(246,241,232,0.7); letter-spacing: 0.02em; display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none; z-index: 3;">
+    
+    <span style="font-size: 18px; font-style: normal; animation: wp-bob 1.8s ease-in-out infinite;">↓</span>
+  </div>
+</section>
+
+<section data-screen-label="The Grid — top reads" style="padding: 48px clamp(16px, 3.5vw, 40px) 56px; max-width: 1480px; margin: 0 auto;">
+  <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 6px;">
+    <h2 style="font-family: 'Fraunces', serif; font-weight: 700; font-size: clamp(26px, 3vw, 34px); letter-spacing: -0.5px; margin: 0;">What's surging <em style="color: #d6361b; font-style: italic; font-weight: 500;">{{ contextLabel }}</em></h2>
+    <span style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #6b5f50; font-weight: 600;">{{ gridStatus }}</span>
+  </div>
+  <p style="font-family: 'Fraunces', serif; font-style: italic; font-size: 16px; color: #6b5f50; margin: 0 0 26px;">Tap any story to find out what the world is reading about.</p>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 20px; grid-auto-flow: dense;">
+    <sc-if value="{{ hasFeature }}" hint-placeholder-val="{{ false }}">
+      <article onClick="{{ feature.open }}" style="grid-column: {{ featureSpan }}; position: relative; border-radius: 4px; overflow: hidden; cursor: pointer; background-color: #14110f; background-image: {{ feature.thumbCss }}; background-size: cover; background-position: center 22%; aspect-ratio: 16 / 10.6; display: flex; align-items: flex-end; border: 1px solid rgba(20,17,15,0.2); transition: transform 0.25s ease, box-shadow 0.25s ease;" style-hover="transform: translateY(-4px); box-shadow: 0 14px 40px rgba(20,17,15,0.3);">
+        <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(12,10,8,0.88) 0%, rgba(12,10,8,0.45) 42%, rgba(12,10,8,0.05) 75%);"></div>
+        <div style="position: absolute; top: 14px; left: 14px; background: rgba(246,241,232,0.94); color: #14110f; padding: 4px 11px; border-radius: 3px; font-family: 'Fraunces', serif; font-weight: 700; font-size: 14px;">№ 1</div>
+        <div style="position: relative; padding: clamp(18px, 2.6vw, 32px); color: #f6f1e8; max-width: 60ch;">
+          <div style="font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: #f0a48a; font-weight: 700; margin-bottom: 10px;">{{ feature.kicker }} · Most read</div>
+          <div style="font-family: 'Fraunces', serif; font-weight: 700; font-size: clamp(28px, 3.4vw, 46px); line-height: 1.02; letter-spacing: -1px; margin-bottom: 10px;">{{ feature.title }}</div>
+          <div style="font-family: 'Fraunces', serif; font-size: clamp(14px, 1.3vw, 17px); line-height: 1.45; color: rgba(246,241,232,0.85); margin-bottom: 14px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">{{ feature.desc }}</div>
+          <div style="font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; color: rgba(246,241,232,0.7);"><b style="font-family: 'Fraunces', serif; font-weight: 700; font-size: 15px; color: #f6f1e8; text-transform: none;">{{ feature.views }}</b> views in 24h</div>
+        </div>
+      </article>
+    </sc-if>
+
+    <sc-for list="{{ cards }}" as="c" hint-placeholder-count="8">
+      <article onClick="{{ c.open }}" style="background: #fdfaf3; border: 1px solid rgba(20,17,15,0.12); border-radius: 4px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; position: relative; transition: transform 0.25s ease, box-shadow 0.25s ease;" style-hover="transform: translateY(-4px); box-shadow: 0 14px 40px rgba(20,17,15,0.16);">
+        <div style="width: 100%; aspect-ratio: 16 / 10; background-color: #ece4d3; background-image: {{ c.thumbCss }}; background-size: cover; background-position: center 25%; position: relative; display: flex; align-items: center; justify-content: center;">
+          <sc-if value="{{ c.noImg }}" hint-placeholder-val="{{ false }}">
+            <span style="font-family: 'Fraunces', serif; font-weight: 900; font-style: italic; font-size: 84px; color: rgba(214,54,27,0.85); line-height: 1; font-variation-settings: 'opsz' 144;">{{ c.letter }}</span>
+          </sc-if>
+          <div style="position: absolute; top: 12px; left: 12px; background: rgba(20,17,15,0.85); color: #f6f1e8; padding: 4px 10px; border-radius: 3px; font-family: 'Fraunces', serif; font-weight: 700; font-size: 14px; letter-spacing: 0.04em;">№ {{ c.rank }}</div>
+        </div>
+        <div style="padding: 16px 18px 18px; flex: 1; display: flex; flex-direction: column; gap: 0;">
+          <div style="font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #6b5f50; margin-bottom: 6px;">{{ c.kicker }}</div>
+          <div style="font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px; line-height: 1.2; color: #14110f; letter-spacing: -0.3px;">{{ c.title }}</div>
+          <div style="font-size: 13px; color: #2a2520; margin-top: 8px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{ c.desc }}</div>
+          <div style="margin-top: auto; padding-top: 12px; font-size: 11px; color: #6b5f50; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600;"><b style="color: #14110f; font-family: 'Fraunces', serif; font-weight: 700; font-size: 14px; letter-spacing: -0.2px; text-transform: none;">{{ c.views }}</b> views in 24h</div>
+        </div>
+      </article>
+    </sc-for>
+  </div>
+</section>
+
+<footer style="padding: 40px clamp(16px, 3.5vw, 40px) 56px; max-width: 1480px; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-start; gap: 28px; flex-wrap: wrap; border-top: 1px solid rgba(20,17,15,0.12);">
+  <div style="font-family: 'Fraunces', serif; font-weight: 900; font-size: 20px; letter-spacing: -0.6px;">Wiki<span style="color: #d6361b;">Pulse</span></div>
+  <div style="max-width: 62ch; font-size: 12px; line-height: 1.6; color: #6b5f50; text-align: right; margin-left: auto;">
+    Data &amp; content from <a href="https://en.wikipedia.org" target="_blank" rel="noopener">Wikipedia</a> under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>. Not affiliated with the Wikimedia Foundation. Trends inferred from public data, shown as-is.
+    <div style="margin-top: 10px; font-size: 11px; letter-spacing: 0.06em; color: #a1937f;">{{ editionLine }}</div>
+  </div>
+</footer>
+
+<aside data-screen-label="The Article — detail panel" style="position: fixed; top: 0; right: 0; width: min(540px, 100vw); height: 100vh; background: #f6f1e8; border-left: 1px solid #1a1714; transform: {{ panelTransform }}; transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1); z-index: 100; overflow-y: auto; box-shadow: -20px 0 60px rgba(20,17,15,0.18);">
+  <div style="position: sticky; top: 0; background: #f6f1e8; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(20,17,15,0.12); z-index: 2;">
+    <button onClick="{{ closePanel }}" style="background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #6b5f50; display: flex; gap: 6px; align-items: center;" style-hover="color: #d6361b;">← Back to the pulse</button>
+    <span style="font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #d6361b; font-weight: 700;">{{ panel.context }}</span>
+  </div>
+  <div style="width: 100%; aspect-ratio: 16 / 10; background-color: #ece4d3; background-image: {{ panel.imgCss }}; background-size: cover; background-position: center 20%; display: flex; align-items: center; justify-content: center;">
+    <sc-if value="{{ panel.noImg }}" hint-placeholder-val="{{ false }}">
+      <span style="font-family: 'Fraunces', serif; font-weight: 900; font-style: italic; font-size: 120px; color: rgba(214,54,27,0.85); line-height: 1;">{{ panel.letter }}</span>
+    </sc-if>
+  </div>
+  <div style="padding: 32px 36px 60px;">
+    <div style="font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: #d6361b; font-weight: 700; margin-bottom: 12px;">{{ panel.kicker }}</div>
+    <h2 style="font-family: 'Fraunces', serif; font-weight: 700; font-size: clamp(34px, 4vw, 44px); line-height: 1.04; letter-spacing: -1px; margin: 0 0 8px;">{{ panel.title }}</h2>
+    <p style="font-family: 'Fraunces', serif; font-style: italic; color: #6b5f50; font-size: 17px; margin: 0 0 24px;">{{ panel.desc }}</p>
+
+    <div style="background: #14110f; color: #f6f1e8; border-radius: 4px; padding: 22px 24px 18px; margin-bottom: 26px;">
+      <div style="font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #f0a48a; font-weight: 700; margin-bottom: 10px;">Readership over time</div>
+      <p style="font-family: 'Fraunces', serif; font-size: 17px; line-height: 1.45; margin: 0 0 16px;">{{ panel.why }}</p>
+      <sc-if value="{{ panel.hasSpark }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <svg viewBox="0 0 440 72" preserveAspectRatio="none" style="width: 100%; height: 72px; display: block;">
+            <path d="{{ panel.sparkArea }}" fill="rgba(214,54,27,0.3)"></path>
+            <path d="{{ panel.sparkLine }}" fill="none" stroke="#d6361b" stroke-width="2" stroke-linejoin="round"></path>
+          </svg>
+          <div style="display: flex; justify-content: space-between; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(246,241,232,0.5); font-weight: 600; margin-top: 6px;">
+            <span>30 days ago</span><span style="color: #f0a48a;">Yesterday</span>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="display: flex; gap: 24px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #6b5f50; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid rgba(20,17,15,0.12);">
+      <div><b style="display: block; font-family: 'Fraunces', serif; font-weight: 700; font-size: 22px; color: #14110f; text-transform: none; letter-spacing: -0.3px;">{{ panel.views }}</b>Views in 24h</div>
+      <div><b style="display: block; font-family: 'Fraunces', serif; font-weight: 700; font-size: 22px; color: #14110f; text-transform: none; letter-spacing: -0.3px;">{{ panel.rank }}</b>Rank</div>
+      <div><b style="display: block; font-family: 'Fraunces', serif; font-weight: 700; font-size: 22px; color: #d6361b; text-transform: none; letter-spacing: -0.3px;">{{ panel.trend }}</b>vs 30-day norm</div>
+    </div>
+
+    <sc-if value="{{ panel.hasActivity }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-bottom: 26px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px;">
+          <div style="font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: #d6361b; font-weight: 700;">Where the story is moving</div>
+          <div style="font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: #6b5f50; font-weight: 600;">Sections being rewritten</div>
+        </div>
+        <ol style="list-style: none; margin: 0; padding: 0; border-top: 1px solid rgba(20,17,15,0.14);">
+          <sc-for list="{{ panel.activity }}" as="row" hint-placeholder-count="3">
+            <li style="display: flex; align-items: center; gap: 14px; padding: 11px 0 12px; border-bottom: 1px solid rgba(20,17,15,0.12);">
+              <span style="font-family: 'Fraunces', serif; font-weight: 700; font-size: 13px; color: #c9bda9; width: 16px; flex-shrink: 0; text-align: right;">{{ row.n }}</span>
+              <span style="font-family: 'Fraunces', serif; font-weight: 600; font-size: 17px; letter-spacing: -0.3px; color: #14110f; flex: 1; line-height: 1.15;">{{ row.label }}</span>
+              <span style="width: 72px; height: 4px; flex-shrink: 0; background: rgba(20,17,15,0.08); border-radius: 3px; overflow: hidden;"><span style="display: block; height: 100%; width: {{ row.barWidth }}; background: #d6361b; border-radius: 3px;"></span></span>
+            </li>
+          </sc-for>
+        </ol>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ panel.hasRelated }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-bottom: 26px;">
+        <div style="font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: #6b5f50; font-weight: 700; margin-bottom: 10px;">Surging alongside it</div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <sc-for list="{{ panel.related }}" as="rel" hint-placeholder-count="3">
+            <button onClick="{{ rel.open }}" style="background: #ece4d3; border: 1px solid rgba(20,17,15,0.15); color: #14110f; padding: 7px 14px; border-radius: 20px; font-family: 'Fraunces', serif; font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: -0.1px;" style-hover="background: #d6361b; color: #f6f1e8; border-color: #d6361b;">{{ rel.title }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <p style="font-family: 'Fraunces', serif; font-size: 17px; line-height: 1.55; color: #2a2520; margin: 0 0 28px;"><span style="font-family: 'Fraunces', serif; font-weight: 900; font-size: 56px; float: left; line-height: 0.85; padding: 6px 8px 0 0; color: #d6361b;">{{ panel.dropCap }}</span>{{ panel.extractRest }}</p>
+
+    <a href="{{ panel.url }}" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: 8px; background: #14110f; color: #f6f1e8; padding: 12px 20px; border-radius: 4px; text-decoration: none; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; transition: background 0.15s;" style-hover="background: #d6361b;">Read on Wikipedia →</a>
+  </div>
+</aside>
+
+<div style="position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #14110f; color: #f6f1e8; padding: 12px 20px; border-radius: 4px; font-size: 13px; letter-spacing: 0.06em; opacity: {{ toastOpacity }}; transition: opacity 0.2s; z-index: 200; pointer-events: none;">{{ toast }}</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;dataMode&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;auto&quot;, &quot;options&quot;: [&quot;auto&quot;, &quot;snapshot&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Data&quot;},
+  &quot;streamBands&quot;: {&quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 14, &quot;min&quot;: 6, &quot;max&quot;: 18, &quot;step&quot;: 1, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Streamgraph&quot;}
+}">
+class Component extends DCLogic {
+  state = {
+    liveLabel: 'Loading', dateline: '', edition: '', editionLine: '',
+    statTotal: '—', statCountries: '—',
+    heroView: 'map', statArticles: 'Top 50',
+    region: 'ALL', selectedA2: null, selectedNum: null,
+    viewName: 'Global · the whole world',
+    contextLabel: 'globally', gridStatus: 'Warming up…',
+    mapStatus: 'The top fifty, ranked, just below',
+    feature: null, cards: [],
+    panelOpen: false, panel: this.emptyPanel(),
+    toast: '', toastOn: false,
+    isMobile: typeof window !== 'undefined' && window.innerWidth < 900,
+    streamNote: ''
+  };
+
+  emptyPanel() {
+    return { context: 'GLOBAL', imgCss: 'none', noImg: false, letter: '', kicker: '', title: '', desc: '',
+      why: '', inference: '', hasInference: false, hasSpark: false, sparkArea: '', sparkLine: '', views: '—', rank: '—', trend: '—',
+      hasRelated: false, related: [], dropCap: '', extractRest: '', url: '#' };
+  }
+
+  // ---- refs ----
+  mapMount = (el) => { this._mapMount = el; };
+  mapTipRef = (el) => { this._mapTip = el; };
+  streamMount = (el) => { this._streamMount = el; };
+  streamTipRef = (el) => { this._streamTip = el; };
+
+  // ---- caches ----
+  countryCache = new Map(); summaryCache = new Map(); seriesCache = new Map();
+  countryNames = new Map(); globalTop = []; streamCast = []; mode = 'live'; reportDay = null;
+
+  PALETTE = ['#d6361b','#c6953a','#6b8e6a','#2f5d62','#a85c8a','#e2a93d','#88607b','#3a6b8a','#b25e2a','#5d8a6f','#7d6ea8','#c05c50','#4e7d8c','#9a7b3f'];
+  STOP = new Set(['list','the','and','film','series','national','team','2025','2026','2030','with','from']);
+
+  fmtN(n) { return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : String(n); }
+  isReal(a) { return a && !/^(Special:|Wikipedia:|Portal:|File:|Category:|Help:|Talk:|Template:|Draft:|User:)/.test(a) && a !== 'Main_Page' && a !== '-' && this.isSafe(a); }
+  // Keep the newsroom family-friendly: drop adult/explicit topics wherever they trend.
+  isSafe(a) {
+    const t = a.replace(/_/g, ' ').toLowerCase();
+    if (/\.xxx\b/.test(t)) return false;
+    return !/(pornhub|xvideos|xhamster|xnxx|redtube|youporn|onlyfans|brazzers|\bporn|pornstar|pornograph|xxx |sex position|deepthroat|masturbat|erotic|hentai|nudity|\bnude\b|\bmilf\b|escort service|\bbrothel|\bincest|bestiality|fellatio|cunnilingus|genitalia|\banal sex|\boral sex|blowjob|\bnsfw\b|adult film|adult video|list of .*(pornographic|adult))/.test(t);
+  }
+  pad(n) { return String(n).padStart(2, '0'); }
+
+  categoryOf(desc) {
+    if (!desc) return 'Topic';
+    const d = desc.toLowerCase();
+    if (/(film|movie|actor|actress|director|series|tv |television)/.test(d)) return 'Screen';
+    if (/(politician|president|prime minister|senator|election|party)/.test(d)) return 'Politics';
+    if (/(footballer|cricket|tennis|nba|nfl|athlete|sport|olymp|eater|tournament)/.test(d)) return 'Sport';
+    if (/(singer|musician|band|rapper|album|song)/.test(d)) return 'Music';
+    if (/(scientist|physicist|chemist|biologist|engineer)/.test(d)) return 'Science';
+    if (/(author|writer|novelist|poet|book)/.test(d)) return 'Letters';
+    if (/(company|brand|business|ceo)/.test(d)) return 'Business';
+    if (/(country|city|capital|region|island|holiday|mountain)/.test(d)) return 'Places';
+    if (/(war|battle|military|treaty|empire|founding)/.test(d)) return 'History';
+    return 'Topic';
+  }
+
+  // ================= boot =================
+  componentDidMount() {
+    this._alive = true;
+    this._onKey = (e) => { if (e.key === 'Escape') this.doClosePanel(); };
+    document.addEventListener('keydown', this._onKey);
+    this._onResize = () => {
+      clearTimeout(this._rt);
+      this._rt = setTimeout(() => {
+        this.setState({ isMobile: window.innerWidth < 900 });
+        if (this._topo) this.renderMap();
+        if (this.streamCast.length) this.renderStream();
+      }, 250);
+    };
+    window.addEventListener('resize', this._onResize);
+    const wait = () => {
+      if (window.d3 && window.topojson && window.WIKIPULSE_GEO) this.boot();
+      else setTimeout(wait, 60);
+    };
+    wait();
+  }
+
+  componentWillUnmount() {
+    this._alive = false;
+    document.removeEventListener('keydown', this._onKey);
+    window.removeEventListener('resize', this._onResize);
+  }
+
+  async boot() {
+    this.geo = window.WIKIPULSE_GEO;
+    const forceSnap = (this.props.dataMode ?? 'auto') === 'snapshot';
+    let arts = null;
+    if (!forceSnap) {
+      try { arts = await this.fetchGlobalTopLive(); this.mode = 'live'; } catch (e) { arts = null; }
+    }
+    if (!arts) {
+      this.mode = 'snapshot';
+      const snap = await fetch('data/snapshot-global.json').then(r => r.json());
+      this.reportDay = snap.date.replace(/-/g, '');
+      arts = snap.articles;
+    }
+    this.globalTop = arts;
+    this.setDateline();
+    this.setState({
+      liveLabel: this.mode === 'live' ? 'Live' : 'Snapshot',
+      statTotal: this.fmtN(arts.reduce((s, a) => s + a.views, 0)),
+      statArticles: 'Top ' + arts.slice(0, 50).length,
+      streamNote: this.mode === 'live' ? 'Live from the Wikimedia Pageviews API.' : 'Rendered from the latest saved snapshot.'
+    });
+    this.buildCards(arts.slice(0, 50), 'globally');
+    if (this.mode === 'live') this.enrichLive(arts.slice(0, 50), () => this.buildCards(this.currentList(), this.state.contextLabel));
+    // map + stream in parallel
+    this.initMap();
+    this.initStream();
+  }
+
+  setDateline() {
+    let d;
+    if (this.reportDay) d = new Date(Date.UTC(+this.reportDay.slice(0, 4), +this.reportDay.slice(4, 6) - 1, +this.reportDay.slice(6, 8)));
+    else d = new Date(Date.now() - 48 * 3600 * 1000);
+    const s = d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).toUpperCase();
+    const ed = (this.reportDay || '').slice(2) || d.toISOString().slice(2, 10).replace(/-/g, '');
+    const pretty = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+    const editionLine = (this.mode === 'live' ? 'Live edition · data through ' : 'Saved edition · ') + pretty;
+    this.setState({ dateline: 'PULSE OF ' + s, edition: ed, editionLine });
+  }
+
+  async fetchGlobalTopLive() {
+    for (const back of [36, 60]) {
+      const d = new Date(Date.now() - back * 3600 * 1000);
+      const y = d.getUTCFullYear(), m = this.pad(d.getUTCMonth() + 1), dd = this.pad(d.getUTCDate());
+      try {
+        const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 8000);
+        const res = await fetch(`https://wikimedia.org/api/rest_v1/metrics/pageviews/top/en.wikipedia/all-access/${y}/${m}/${dd}`, { signal: ctrl.signal });
+        clearTimeout(t);
+        if (!res.ok) continue;
+        const data = await res.json();
+        this.reportDay = `${y}${m}${dd}`;
+        return data.items[0].articles.filter(a => this.isReal(a.article)).slice(0, 50)
+          .map((a, i) => ({ article: a.article, views: a.views, rank: i + 1, title: a.article.replace(/_/g, ' '), desc: '', extract: '', thumb: null, img: null, url: 'https://en.wikipedia.org/wiki/' + a.article }));
+      } catch (e) { /* next */ }
+    }
+    throw new Error('live unavailable');
+  }
+
+  async fetchSummary(title) {
+    if (this.summaryCache.has(title)) return this.summaryCache.get(title);
+    try {
+      const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}?redirect=true`);
+      if (!res.ok) return null;
+      const s = await res.json();
+      const out = {
+        title: (s.displaytitle || title.replace(/_/g, ' ')).replace(/<[^>]+>/g, ''),
+        desc: s.description || '', extract: (s.extract || ''),
+        thumb: s.thumbnail ? s.thumbnail.source : null,
+        img: s.originalimage ? s.originalimage.source : null,
+        url: s.content_urls ? s.content_urls.desktop.page : ('https://en.wikipedia.org/wiki/' + title)
+      };
+      this.summaryCache.set(title, out);
+      return out;
+    } catch (e) { return null; }
+  }
+
+  async enrichLive(arts, onDone) {
+    for (let i = 0; i < arts.length; i += 10) {
+      await Promise.all(arts.slice(i, i + 10).map(async a => {
+        const s = await this.fetchSummary(a.article);
+        if (s) Object.assign(a, s);
+      }));
+      if (!this._alive) return;
+      onDone();
+    }
+  }
+
+  currentList() {
+    return this.state.selectedA2 ? (this.countryCache.get(this.state.selectedA2) || []) : this.globalTop;
+  }
+
+  // ================= grid =================
+  toCardVM(a) {
+    const title = a.title || a.article.replace(/_/g, ' ');
+    return {
+      rank: a.rank, title,
+      kicker: this.categoryOf(a.desc),
+      desc: a.desc || '',
+      views: this.fmtN(a.views),
+      thumbCss: a.thumb ? `url('${a.thumb}')` : 'none',
+      noImg: !a.thumb,
+      letter: title.trim().charAt(0).toUpperCase(),
+      open: () => this.openArticle(a.article)
+    };
+  }
+
+  buildCards(list, contextLabel) {
+    if (!list || list.length === 0) {
+      this.setState({ feature: null, cards: [], contextLabel, gridStatus: 'Wikipedia doesn\u2019t surface enough signal here today' });
+      return;
+    }
+    const feature = { ...this.toCardVM(list[0]), desc: (list[0].extract || list[0].desc || '').slice(0, 220) };
+    const cards = list.slice(1).map(a => this.toCardVM(a));
+    this.setState({ feature, cards, contextLabel, gridStatus: list.length + ' stories · ranked by pageviews' });
+  }
+
+  // ================= map =================
+  async initMap() {
+    try {
+      this._topo = await fetch('data/countries-110m.json').then(r => r.json());
+      this.renderMap();
+      // preload hover data
+      if (this.mode === 'snapshot') {
+        const snap = await fetch('data/snapshot-countries.json').then(r => r.json());
+        Object.entries(snap.countries).forEach(([k, v]) => this.countryCache.set(k, v));
+        this.paintMap();
+      } else {
+        const codes = this.geo.PRELOAD;
+        for (let i = 0; i < codes.length; i += 4) {
+          await Promise.all(codes.slice(i, i + 4).map(async c => {
+            if (!this.countryCache.has(c)) {
+              const arts = await this.fetchCountryTop(c);
+              if (arts) this.countryCache.set(c, arts);
+            }
+          }));
+          if (!this._alive) return;
+        }
+        this.paintMap();
+      }
+      this.setState({ mapStatus: 'The top fifty, ranked, just below' });
+    } catch (e) {
+      this.setState({ mapStatus: 'Map data could not load' });
+    }
+  }
+
+  async fetchCountryTop(code) {
+    if (this.mode === 'snapshot') return this.countryCache.get(code) || null;
+    const rd = this.reportDay;
+    try {
+      const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/top-per-country/${code}/all-access/${rd.slice(0,4)}/${rd.slice(4,6)}/${rd.slice(6,8)}`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return (data.items?.[0]?.articles || [])
+        .filter(a => this.isReal(a.article))
+        .filter(a => !a.project || a.project.startsWith('en'))
+        .slice(0, 10)
+        .map(a => ({ article: a.article, views: a.views_ceil || a.views || 0, rank: a.rank, title: a.article.replace(/_/g, ' '), desc: '', thumb: null, url: 'https://en.wikipedia.org/wiki/' + a.article }));
+    } catch (e) { return null; }
+  }
+
+  countryFill(num) {
+    const a2 = this.geo.NUM_TO_A2[num];
+    if (a2 && a2 === this.state.selectedA2) return '#d6361b';
+    if (a2 && this.countryCache.has(a2)) return 'rgba(246,241,232,0.16)';
+    return 'rgba(246,241,232,0.05)';
+  }
+  countryOpacity(num) {
+    if (this.state.region === 'ALL') return 1;
+    const a2 = this.geo.NUM_TO_A2[num];
+    return (a2 && this.geo.A2_TO_REGION[a2] === this.state.region) ? 1 : 0.24;
+  }
+
+  paintMap() {
+    if (!this._countrySel) return;
+    const self = this;
+    this._countrySel
+      .attr('fill', function () { return self.countryFill(this.dataset.num); })
+      .attr('opacity', function () { return self.countryOpacity(this.dataset.num); })
+      .attr('stroke', function () { return self.geo.NUM_TO_A2[this.dataset.num] === self.state.selectedA2 ? '#f6f1e8' : 'rgba(246,241,232,0.10)'; })
+      .attr('stroke-width', function () { return self.geo.NUM_TO_A2[this.dataset.num] === self.state.selectedA2 ? 1.2 : 0.5; });
+  }
+
+  waitForSize(mount, fn) {
+    if (mount.clientWidth > 40 && mount.clientHeight > 40) { fn(); return; }
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => {
+        if (mount.clientWidth > 40 && mount.clientHeight > 40) { ro.disconnect(); fn(); }
+      });
+      ro.observe(mount);
+    } else {
+      setTimeout(() => this._alive && this.waitForSize(mount, fn), 200);
+    }
+  }
+
+  renderMap() {
+    const mount = this._mapMount;
+    if (!mount || !this._topo) return;
+    if (mount.clientWidth < 40 || mount.clientHeight < 40) { this.waitForSize(mount, () => this.renderMap()); return; }
+    const d3 = window.d3, topojson = window.topojson, self = this;
+    mount.innerHTML = '';
+    const width = mount.clientWidth, height = mount.clientHeight;
+    const countries = topojson.feature(this._topo, this._topo.objects.countries).features;
+    countries.forEach(c => this.countryNames.set(String(c.id).padStart(3, '0'), c.properties.name));
+    this.setState({ statCountries: String(countries.length) });
+
+    const svg = d3.select(mount).append('svg').attr('viewBox', `0 0 ${width} ${height}`).style('width', '100%').style('height', '100%').style('display', 'block');
+    const isWide = width > 900;
+    const projection = d3.geoNaturalEarth1().fitSize([width * 0.92, height * 0.96], { type: 'Sphere' });
+    projection.translate([width * (isWide ? 0.56 : 0.5), height / 2]);
+    const path = d3.geoPath(projection);
+
+    svg.append('path').attr('d', path({ type: 'Sphere' })).attr('fill', 'none').attr('stroke', 'rgba(246,241,232,0.14)').attr('stroke-width', 1);
+    svg.append('path').attr('d', path(d3.geoGraticule10())).attr('fill', 'none').attr('stroke', 'rgba(246,241,232,0.05)').attr('stroke-width', 0.3);
+
+    const tip = this._mapTip;
+    this._countrySel = svg.selectAll('path.country').data(countries).enter().append('path')
+      .attr('class', 'country').attr('d', path)
+      .attr('data-num', d => String(d.id).padStart(3, '0'))
+      .style('cursor', 'pointer')
+      .style('transition', 'fill 0.18s ease')
+      .on('mousemove', function (ev, d) {
+        const num = String(d.id).padStart(3, '0');
+        const a2 = self.geo.NUM_TO_A2[num];
+        if (a2 !== self.state.selectedA2) d3.select(this).attr('fill', '#f0a48a');
+        const cached = a2 ? self.countryCache.get(a2) : null;
+        let topHtml;
+        if (cached && cached.length > 0) {
+          topHtml = `<div style="font-size:13px;line-height:1.45;color:#2a2520;"><span style="font-family:Inter,sans-serif;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:#6b5f50;font-weight:700;display:block;margin-bottom:4px;">Top three articles</span>${cached.slice(0, 3).map((a, i) => `${i + 1}. ${a.article.replace(/_/g, ' ')}`).join('<br>')}</div>`;
+        } else {
+          topHtml = `<div style="font-size:13px;font-style:italic;color:#6b5f50;">Click to load what ${d.properties.name} is reading.</div>`;
+        }
+        tip.innerHTML = `<div style="font-weight:700;font-size:17px;letter-spacing:-0.2px;margin-bottom:6px;">${d.properties.name}</div>${topHtml}<div style="font-family:Inter,sans-serif;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#d6361b;font-weight:700;margin-top:8px;">${cached ? 'Click to focus' : '↗ Click to load'}</div>`;
+        const rect = mount.getBoundingClientRect();
+        let left = ev.clientX - rect.left + 16, top = ev.clientY - rect.top - 20;
+        if (left + 300 > rect.width) left = ev.clientX - rect.left - 316;
+        if (top < 16) top = ev.clientY - rect.top + 24;
+        tip.style.left = left + 'px'; tip.style.top = top + 'px'; tip.style.opacity = 1;
+      })
+      .on('mouseleave', function () { tip.style.opacity = 0; self.paintMap(); })
+      .on('click', function (ev, d) {
+        const num = String(d.id).padStart(3, '0');
+        self.selectCountry(self.geo.NUM_TO_A2[num], num, d.properties.name);
+      });
+    this.paintMap();
+  }
+
+  countryName(a2) {
+    for (const [num, code] of Object.entries(this.geo.NUM_TO_A2)) {
+      if (code === a2) { const n = this.countryNames.get(num); if (n) return n; }
+    }
+    return a2;
+  }
+
+  async selectCountry(a2, num, fallbackName) {
+    if (!a2) { this.showToast('No pageview data mapping for this region.'); return; }
+    const name = this.countryName(a2) || fallbackName;
+    this.setState({ selectedA2: a2, selectedNum: num, viewName: name, hasSelectionFlag: true });
+    this.paintMap();
+    this.showToast(`Loading what ${name} is reading…`);
+    let articles = this.countryCache.get(a2);
+    if (!articles) {
+      articles = await this.fetchCountryTop(a2);
+      if (articles) this.countryCache.set(a2, articles);
+    }
+    if (!articles || articles.length === 0) {
+      this.buildCards(null, `in ${name}`);
+      this.showToast(`Wikipedia doesn't surface pageview data for ${name}.`);
+      return;
+    }
+    this.buildCards(articles, `in ${name}`);
+    this.enrichLiveAlways(articles);
+    const gridEl = document.querySelector('[data-screen-label="The Grid — top reads"]');
+    if (gridEl) window.scrollTo({ top: gridEl.getBoundingClientRect().top + window.scrollY - 70, behavior: 'smooth' });
+  }
+
+  async enrichLiveAlways(articles) {
+    // country lists arrive bare even in snapshot mode — try the network quietly
+    for (let i = 0; i < articles.length; i += 5) {
+      await Promise.all(articles.slice(i, i + 5).map(async a => {
+        const s = await this.fetchSummary(a.article);
+        if (s) Object.assign(a, s);
+      }));
+      if (!this._alive) return;
+      if (this.state.selectedA2 && this.countryCache.get(this.state.selectedA2) === articles) {
+        this.buildCards(articles, this.state.contextLabel);
+      }
+    }
+  }
+
+  doResetView = () => {
+    this.setState({ selectedA2: null, selectedNum: null, viewName: 'Global · the whole world' });
+    setTimeout(() => this.paintMap(), 0);
+    this.buildCards(this.globalTop, 'globally');
+  };
+
+  setRegion(r) { this.setState({ region: r }); setTimeout(() => this.paintMap(), 0); }
+
+  setHeroView = (v) => {
+    this.setState({
+      heroView: v,
+      mapStatus: v === 'flow' ? 'Hover a river to trace it · click to read why' : 'The top fifty, ranked, just below'
+    });
+    if (v === 'flow') setTimeout(() => this.renderStream(), 60);
+    else if (this._topo) setTimeout(() => this.renderMap(), 60);
+  };
+
+  // ================= streamgraph =================
+  async initStream() {
+    const cast = this.globalTop.slice(0, 20);
+    if (this.mode === 'snapshot') {
+      try {
+        const daily = await fetch('data/snapshot-daily.json').then(r => r.json());
+        Object.entries(daily.series).forEach(([k, v]) => this.seriesCache.set(k, v));
+      } catch (e) { /* none */ }
+    } else {
+      for (let i = 0; i < cast.length; i += 7) {
+        await Promise.all(cast.slice(i, i + 7).map(a => this.fetchSeries(a.article)));
+        if (!this._alive) return;
+      }
+    }
+    this.streamCast = cast.filter(a => (this.seriesCache.get(a.article) || []).length >= 20);
+    this.renderStream();
+  }
+
+  async fetchSeries(article) {
+    if (this.seriesCache.has(article)) return this.seriesCache.get(article);
+    try {
+      const end = new Date(Date.now() - 48 * 3600 * 1000);
+      const start = new Date(end.getTime() - 31 * 24 * 3600 * 1000);
+      const fmt = d => `${d.getUTCFullYear()}${this.pad(d.getUTCMonth() + 1)}${this.pad(d.getUTCDate())}00`;
+      const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/${encodeURIComponent(article)}/daily/${fmt(start)}/${fmt(end)}`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const r = await res.json();
+      const s = r.items.map(it => ({ t: it.timestamp.slice(0, 8), v: it.views }));
+      this.seriesCache.set(article, s);
+      return s;
+    } catch (e) { return null; }
+  }
+
+  renderStream() {
+    const mount = this._streamMount;
+    if (!mount || !this.streamCast.length) return;
+    if (mount.clientWidth < 40 || mount.clientHeight < 40) { this.waitForSize(mount, () => this.renderStream()); return; }
+    const d3 = window.d3, self = this;
+    mount.innerHTML = '';
+    const width = mount.clientWidth, height = mount.clientHeight;
+    const bands = Math.max(6, Math.min(18, this.props.streamBands ?? 14));
+    const cast = this.streamCast.slice(0, bands);
+    const keys = cast.map(a => a.article);
+
+    // unified date index
+    const dateSet = new Set();
+    keys.forEach(k => (this.seriesCache.get(k) || []).forEach(p => dateSet.add(p.t)));
+    const dates = [...dateSet].sort();
+    const rows = dates.map(t => {
+      const row = { t };
+      keys.forEach(k => {
+        const s = this.seriesCache.get(k) || [];
+        const hit = s.find(p => p.t === t);
+        row[k] = hit ? hit.v : 0;
+      });
+      return row;
+    });
+    const parse = t => new Date(Date.UTC(+t.slice(0, 4), +t.slice(4, 6) - 1, +t.slice(6, 8)));
+
+    const margin = { top: 18, right: 24, bottom: 34, left: 24 };
+    const stack = d3.stack().keys(keys).order(d3.stackOrderInsideOut).offset(d3.stackOffsetWiggle);
+    const layers = stack(rows);
+    const x = d3.scaleUtc().domain([parse(dates[0]), parse(dates[dates.length - 1])]).range([margin.left, width - margin.right]);
+    const y = d3.scaleLinear()
+      .domain([d3.min(layers, l => d3.min(l, p => p[0])), d3.max(layers, l => d3.max(l, p => p[1]))])
+      .range([height - margin.bottom, margin.top]);
+    const area = d3.area().x((p, i) => x(parse(rows[i].t))).y0(p => y(p[0])).y1(p => y(p[1])).curve(d3.curveBasis);
+
+    const svg = d3.select(mount).append('svg').attr('viewBox', `0 0 ${width} ${height}`).style('width', '100%').style('height', '100%').style('display', 'block');
+
+    const tip = this._streamTip;
+    const bisect = d3.bisector(r => parse(r.t)).center;
+
+    const paths = svg.append('g').selectAll('path').data(layers).enter().append('path')
+      .attr('d', area)
+      .attr('fill', (d, i) => this.PALETTE[i % this.PALETTE.length])
+      .attr('fill-opacity', 0.92)
+      .attr('stroke', '#0c0a08').attr('stroke-width', 0.6)
+      .style('cursor', 'pointer')
+      .style('transition', 'fill-opacity 0.18s ease')
+      .on('mousemove', function (ev, d) {
+        paths.attr('fill-opacity', l => l === d ? 1 : 0.14);
+        labels.attr('opacity', l => l.key === d.key ? 1 : 0.15);
+        const art = cast.find(a => a.article === d.key);
+        const rect = mount.getBoundingClientRect();
+        const idx = bisect(rows, x.invert(ev.clientX - rect.left));
+        const row = rows[Math.max(0, Math.min(rows.length - 1, idx))];
+        const dt = parse(row.t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+        tip.innerHTML = `<div style="font-weight:700;font-size:16px;letter-spacing:-0.2px;margin-bottom:4px;">${(art && art.title) || d.key.replace(/_/g, ' ')}</div><div style="font-family:Inter,sans-serif;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#6b5f50;font-weight:600;">${dt} · <b style="color:#d6361b;">${self.fmtN(row[d.key])}</b> views</div><div style="font-family:Inter,sans-serif;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#d6361b;font-weight:700;margin-top:6px;">Click to read why</div>`;
+        let left = ev.clientX - rect.left + 16, top = ev.clientY - rect.top - 30;
+        if (left + 290 > rect.width) left = ev.clientX - rect.left - 300;
+        tip.style.left = left + 'px'; tip.style.top = top + 'px'; tip.style.opacity = 1;
+      })
+      .on('mouseleave', function () {
+        paths.attr('fill-opacity', 0.92); labels.attr('opacity', 1); tip.style.opacity = 0;
+      })
+      .on('click', (ev, d) => this.openArticle(d.key));
+
+    // labels: candidate positions per band, greedy placement with collision avoidance
+    const bandInfo = layers.map((l) => {
+      const art = cast.find(a => a.article === l.key);
+      const cands = [];
+      for (let j = 2; j < rows.length - 2; j++) {
+        const th = y(l[j][0]) - y(l[j][1]);
+        if (th >= 15) cands.push({ j, th, x: x(parse(rows[j].t)), y: (y(l[j][0]) + y(l[j][1])) / 2 });
+      }
+      cands.sort((p, q) => q.th - p.th);
+      return { key: l.key, cands, maxTh: cands.length ? cands[0].th : 0, title: (art && art.title) || l.key.replace(/_/g, ' ') };
+    });
+    const placed = [];
+    const collides = (a, b) => !(a.x1 < b.x0 || a.x0 > b.x1 || a.y1 < b.y0 || a.y0 > b.y1);
+    bandInfo.sort((p, q) => q.maxTh - p.maxTh).forEach(b => {
+      for (const c of b.cands) {
+        const fs = Math.max(11, Math.min(28, c.th * 0.4));
+        const w = b.title.length * fs * 0.56, h = fs * 1.15;
+        const cx = Math.max(margin.left + w / 2, Math.min(width - margin.right - w / 2, c.x));
+        const box = { x0: cx - w / 2 - 6, x1: cx + w / 2 + 6, y0: c.y - h / 2 - 3, y1: c.y + h / 2 + 3 };
+        if (box.y0 < margin.top || box.y1 > height - margin.bottom) continue;
+        if (placed.some(p => collides(box, p.box))) continue;
+        placed.push({ key: b.key, x: cx, y: c.y, th: c.th, title: b.title, box });
+        break;
+      }
+    });
+    const labels = svg.append('g').selectAll('text').data(placed).enter().append('text')
+      .attr('x', l => l.x).attr('y', l => l.y)
+      .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+      .style('font-family', "'Fraunces', serif").style('font-weight', 600)
+      .style('font-size', l => Math.max(11, Math.min(28, l.th * 0.4)) + 'px')
+      .attr('fill', '#f6f1e8')
+      .attr('stroke', 'rgba(12,10,8,0.45)').attr('stroke-width', 3).attr('paint-order', 'stroke')
+      .style('pointer-events', 'none')
+      .style('letter-spacing', '-0.3px')
+      .text(l => l.title);
+
+    // x axis
+    const axis = svg.append('g');
+    const ticks = x.ticks(width > 800 ? 8 : 4);
+    axis.selectAll('text').data(ticks).enter().append('text')
+      .attr('x', t => x(t)).attr('y', height - 12)
+      .attr('text-anchor', 'middle')
+      .style('font-family', "'Inter', sans-serif").style('font-size', '10px').style('font-weight', 600)
+      .style('letter-spacing', '0.12em')
+      .attr('fill', 'rgba(246,241,232,0.45)')
+      .text(t => t.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).toUpperCase());
+    axis.append('text')
+      .attr('x', width - margin.right).attr('y', 14).attr('text-anchor', 'end')
+      .style('font-family', "'Inter', sans-serif").style('font-size', '10px').style('font-weight', 700)
+      .style('letter-spacing', '0.16em')
+      .attr('fill', '#d6361b')
+      .text('YESTERDAY →');
+  }
+
+  // ================= panel / why engine =================
+  tokens(title) {
+    return title.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length >= 4 && !this.STOP.has(w));
+  }
+
+  findRelated(article) {
+    const me = this.globalTop.find(a => a.article === article);
+    if (!me) return [];
+    const myTok = new Set(this.tokens(me.title || me.article.replace(/_/g, ' ')));
+    const myCat = this.categoryOf(me.desc);
+    return this.globalTop
+      .filter(a => a.article !== article)
+      .map(a => {
+        const t = this.tokens(a.title || a.article.replace(/_/g, ' '));
+        const shared = t.filter(w => myTok.has(w)).length;
+        const cat = this.categoryOf(a.desc) === myCat ? 0.4 : 0;
+        return { a, score: shared + cat };
+      })
+      .filter(r => r.score >= 1)
+      .sort((p, q) => q.score - p.score || p.a.rank - q.a.rank)
+      .slice(0, 3)
+      .map(r => ({ title: r.a.title || r.a.article.replace(/_/g, ' '), open: () => this.openArticle(r.a.article) }));
+  }
+
+  sparkPaths(series) {
+    const d3 = window.d3;
+    const W = 440, H = 72, pad = 3;
+    const xs = d3.scaleLinear().domain([0, series.length - 1]).range([pad, W - pad]);
+    const ys = d3.scaleLinear().domain([0, d3.max(series, p => p.v) || 1]).range([H - pad, pad + 6]);
+    const line = d3.line().x((p, i) => xs(i)).y(p => ys(p.v)).curve(d3.curveMonotoneX);
+    const area = d3.area().x((p, i) => xs(i)).y0(H - pad).y1(p => ys(p.v)).curve(d3.curveMonotoneX);
+    return { line: line(series), area: area(series) };
+  }
+
+  titleCaseSection(s) {
+    const SMALL = new Set(['and','or','of','the','a','an','to','in','on','for','with','at','by','from','vs']);
+    return s.split(/\s+/).map((w, i) => {
+      if (i > 0 && SMALL.has(w.toLowerCase())) return w.toLowerCase();
+      if (/^[A-Z0-9].*[A-Z]/.test(w) || /^\d/.test(w)) return w; // keep acronyms / years / already-cased
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    }).join(' ');
+  }
+
+  // Free "what changed" signal from the article's own revision history — the sections
+  // being rewritten during the surge, ranked by activity. No auth, no keys.
+  async fetchActivity(article) {
+    try {
+      const url = `https://en.wikipedia.org/w/api.php?action=query&prop=revisions&titles=${encodeURIComponent(article)}&rvlimit=200&rvprop=timestamp|comment&format=json&origin=*`;
+      const res = await fetch(url);
+      if (!res.ok) return [];
+      const j = await res.json();
+      const revs = Object.values(j.query.pages)[0].revisions || [];
+      if (!revs.length) return [];
+      const newest = new Date(revs[0].timestamp).getTime();
+      // Widen the window until there's enough activity to read, capped at a week.
+      let win = [];
+      for (const days of [2, 4, 7]) {
+        win = revs.filter(r => newest - new Date(r.timestamp).getTime() <= days * 864e5);
+        if (win.length >= 6) break;
+      }
+      const SKIP = /^(references|external links|sources|further reading|notes|bibliography|see also|top|infobox|in popular culture|popular culture|name|honou?rs|career statistics|statistics|club statistics|filmography|discography|images?|gallery|external media|contents?)$/i;
+      const secs = {};
+      for (const r of win) {
+        const m = (r.comment || '').match(/\/\*\s*([^*|]+?)\s*(\|[^*]*)?\*\//);
+        if (!m) continue;
+        let s = m[1].trim().replace(/\s*\([^)]*\)\s*$/, '').replace(/\s+\d+$/, '').trim();
+        if (!s || SKIP.test(s) || s.length > 46) continue;
+        const key = s.toLowerCase();
+        if (!secs[key]) secs[key] = { label: this.titleCaseSection(s), count: 0 };
+        secs[key].count++;
+      }
+      const ranked = Object.values(secs).sort((a, b) => b.count - a.count);
+      // Only worth showing if the signal is real.
+      if (ranked.length < 2 && !(ranked[0] && ranked[0].count >= 3)) return [];
+      const max = ranked[0].count;
+      return ranked.slice(0, 5).map((r, i) => ({ label: r.label, n: String(i + 1).padStart(2, '0'), barWidth: Math.max(14, Math.round(100 * r.count / max)) + '%' }));
+    } catch (e) { return []; }
+  }
+
+  whyCopy(ratio, title) {
+    const r = ratio >= 10 ? Math.round(ratio) : Math.round(ratio * 10) / 10;
+    if (ratio >= 4) return `Surging — ${r}× its 30-day norm.`;
+    if (ratio >= 2) return `Climbing — ${r}× its 30-day norm.`;
+    if (ratio >= 1.3) return `Warming up — ${r}× its 30-day norm.`;
+    return `Steady — holding near its 30-day norm.`;
+  }
+
+  async openArticle(article) {
+    const list = this.currentList();
+    const hit = list.find(a => a.article === article) || this.globalTop.find(a => a.article === article) || { article, views: 0, rank: null };
+    const title0 = hit.title || article.replace(/_/g, ' ');
+    const context = this.state.selectedA2 ? this.countryName(this.state.selectedA2).toUpperCase() : 'GLOBAL · ' + (this.mode === 'live' ? 'LIVE' : 'SNAPSHOT');
+    this.setState({
+      panelOpen: true,
+      panel: { ...this.emptyPanel(), context, title: title0, letter: title0.charAt(0).toUpperCase(),
+        kicker: 'Loading…', views: hit.views ? this.fmtN(hit.views) : '—', rank: hit.rank ? '#' + hit.rank : '—',
+        why: 'Reading the pulse…', url: 'https://en.wikipedia.org/wiki/' + article }
+    });
+
+    const s = await this.fetchSummary(article) || hit;
+    const series = await this.fetchSeries(article) || this.seriesCache.get(article) || null;
+
+    let why, trend = '—', hasSpark = false, sparkArea = '', sparkLine = '';
+    if (series && series.length >= 10) {
+      const vals = series.map(p => p.v);
+      const base = vals.slice(0, Math.max(5, vals.length - 5)).sort((a, b) => a - b);
+      const median = base[Math.floor(base.length / 2)] || 1;
+      const seriesMax = Math.max(...vals);
+      const recentPeak = Math.max(...vals.slice(-4));
+      const ratio = recentPeak / Math.max(median, 1);
+      this._lastRatio = ratio;
+      // The 24h "most-read" figure updates faster than the per-article daily history (~48h lag).
+      // If today's reading dwarfs anything the 30-day curve has seen, the surge is breaking now.
+      if ((hit.views || 0) > seriesMax * 3 && (hit.views || 0) > 20000) {
+        why = 'Breaking now — today\u2019s readership is beyond anything in its 30-day history.';
+        trend = 'NEW';
+      } else {
+        why = this.whyCopy(ratio);
+        trend = (ratio >= 10 ? Math.round(ratio) : Math.round(ratio * 10) / 10) + '×';
+      }
+      const sp = this.sparkPaths(series);
+      hasSpark = true; sparkArea = sp.area; sparkLine = sp.line;
+    } else {
+      why = 'This page has no readership history yet — it\u2019s brand-new, was just renamed, or redirects from another title.';
+    }
+
+    const related = this.findRelated(article);
+    const extract = (s.extract || s.desc || '').trim();
+    const title = (s.title || title0);
+    this.setState({
+      panel: {
+        context,
+        why,
+        imgCss: (s.img || s.thumb) ? `url('${s.img || s.thumb}')` : 'none',
+        noImg: !(s.img || s.thumb),
+        letter: title.charAt(0).toUpperCase(),
+        kicker: this.categoryOf(s.desc) + ' · Trending',
+        title,
+        desc: s.desc || '',
+        trend, hasSpark, sparkArea, sparkLine,
+        views: hit.views ? this.fmtN(hit.views) : '—',
+        rank: hit.rank ? '#' + hit.rank : '—',
+        hasRelated: related.length > 0, related,
+        activity: [], hasActivity: false,
+        dropCap: extract.charAt(0), extractRest: extract.slice(1),
+        url: s.url || 'https://en.wikipedia.org/wiki/' + article
+      }
+    });
+
+    // Fetch "what's changing" ledger in the background; merge in when it lands.
+    const reqTitle = title;
+    const activity = await this.fetchActivity(article);
+    if (this._alive && this.state.panelOpen && this.state.panel.title === reqTitle) {
+      this.setState(st => ({ panel: { ...st.panel, activity, hasActivity: activity.length > 0 } }));
+    }
+  }
+
+  doClosePanel = () => this.setState({ panelOpen: false });
+
+  showToast(msg) {
+    this.setState({ toast: msg, toastOn: true });
+    clearTimeout(this._tt);
+    this._tt = setTimeout(() => this._alive && this.setState({ toastOn: false }), 2800);
+  }
+
+  // ================= renderVals =================
+  renderVals() {
+    const s = this.state;
+    const REGIONS = [['ALL', 'All'], ['AM', 'Americas'], ['EU', 'Europe'], ['AS', 'Asia'], ['AF', 'Africa'], ['OC', 'Oceania']];
+    return {
+      liveLabel: s.liveLabel, dateline: s.dateline, edition: s.edition, editionLine: s.editionLine,
+      statTotal: s.statTotal, statCountries: s.statCountries,
+      mapMount: this.mapMount, mapTipRef: this.mapTipRef,
+      streamMount: this.streamMount, streamTipRef: this.streamTipRef,
+      mapStatus: s.mapStatus, streamNote: s.streamNote,
+      statArticles: s.statArticles,
+      legendDisplay: (s.isMobile || s.heroView !== 'map') ? 'none' : 'flex',
+      mapOpacity: s.heroView === 'map' ? 1 : 0,
+      mapEvents: s.heroView === 'map' ? 'auto' : 'none',
+      streamOpacity: s.heroView === 'flow' ? 1 : 0,
+      streamEvents: s.heroView === 'flow' ? 'auto' : 'none',
+      showMap: () => this.setHeroView('map'),
+      showFlow: () => this.setHeroView('flow'),
+      mapTabBg: s.heroView === 'map' ? '#d6361b' : 'transparent',
+      mapTabFg: s.heroView === 'map' ? '#f6f1e8' : 'rgba(246,241,232,0.72)',
+      flowTabBg: s.heroView === 'flow' ? '#d6361b' : 'transparent',
+      flowTabFg: s.heroView === 'flow' ? '#f6f1e8' : 'rgba(246,241,232,0.72)',
+      heroCardDisplay: s.heroView === 'map' ? 'block' : 'none',
+      controlsDisplay: s.heroView === 'map' ? 'flex' : 'none',
+      flowCaptionDisplay: s.heroView === 'flow' ? 'block' : 'none',
+      regions: REGIONS.map(([id, label]) => ({
+        label,
+        bg: s.region === id ? '#d6361b' : 'rgba(246,241,232,0.08)',
+        fg: s.region === id ? '#f6f1e8' : 'rgba(246,241,232,0.82)',
+        pick: () => this.setRegion(id)
+      })),
+      viewName: s.viewName,
+      viewNameColor: s.selectedA2 ? '#14110f' : '#d6361b',
+      hasSelection: !!s.selectedA2,
+      resetView: this.doResetView,
+      contextLabel: s.contextLabel, gridStatus: s.gridStatus,
+      hasFeature: !!s.feature,
+      feature: s.feature || {},
+      featureSpan: s.isMobile ? 'auto' : 'span 2',
+      cards: s.cards,
+      panel: s.panel,
+      panelTransform: s.panelOpen ? 'translateX(0)' : 'translateX(101%)',
+      closePanel: this.doClosePanel,
+      toast: s.toast, toastOpacity: s.toastOn ? 1 : 0
+    };
+  }
+}
+</script>
+</body>
+</html>

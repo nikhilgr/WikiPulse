@@ -1,0 +1,1020 @@
+WikiPulse
+  
+    Product Spec · v1.0
+    Prepared for Nikhil · Amplitude
+    May 19, 2026
+  
+
+  "All the world's curiosity, set to music."
+  Internal · Concept brief
+
+  A consumer data app · Concept №14
+  What is the world reading on Wikipedia right now?
+  
+    Wikipedia is the closest thing the internet has to a real-time map of human curiosity. Every minute, billions of small decisions about what to look up surface a portrait of what the world is paying attention to. Wiki Pulse renders that portrait — not as a chart, but as a living publication.
+  
+  
+    Concept · Nikhil · Amplitude
+    Status · Polished v1 scope
+    Inspiration · Flipboard + Wikipedia Pageviews + a slow newsroom aesthetic
+  
+
+  № 01
+  
+    The idea, in one breath
+    Vision · One-liner · Hook
+  
+  
+    
+      An interactive map of the world, where every country reveals what its people are reading on Wikipedia today, rendered as a beautiful daily publication. Click any country — and read what's on its mind.— The pitch in 30 seconds
+    
+    
+      Most analytics dashboards optimize for utility. Wiki Pulse optimizes for delight. The mechanic is borrowed from cartography (an interactive world map of pageviews-per-country), but the soul is borrowed from print: serif typography, generous whitespace, a sense of ritual.
+      The product answers a question almost no one is currently answering well: what is each country curious about, today? What's surging in Japan that nobody in São Paulo cares about? What's the diaspora reading that the home country isn't? What's the one article every country has in common, and what does that tell us?
+      It works because Wikipedia is the substrate of curiosity itself, and that curiosity has a geography. People go to Wikipedia because something happened — and what happened in Lagos rarely matches what happened in Lisbon.
+    
+  
+
+  № 02
+  
+    Why this works, and why now
+    Market · Timing · Wedge
+  
+  
+    
+      № 01
+      Geography is the story
+      The same news event lands differently in different places. Wikipedia's per-country pageview data exposes those differences cleanly — and almost no one is showing them this way.
+    
+    
+      № 02
+      The "why" is the moat
+      Anyone can list trending articles. The defensible product is the moment of recognition — Russell Crowe spikes in Australia but not in Argentina; we surface the news story or the social moment behind it.
+    
+    
+      № 03
+      Open, free, perpetual
+      Wikimedia's APIs are free, unauthenticated, and don't sunset. The substrate isn't going anywhere. The cost structure is small enough that delight, not monetization, can lead.
+    
+    
+      № 04
+      Editorial aesthetics are back
+      Flipboard. Substack. Are.na. The Verge's redesign. There's a renewed appetite for the internet to feel like reading something, not scrolling something.
+    
+    
+      № 05
+      Shareability is built in
+      "Did you see what spiked on Wikipedia yesterday?" is a tweet, a Slack drop, a screenshot. The product makes its own marketing if the visuals are striking.
+    
+    
+      № 06
+      The Amplitude angle
+      An Amplitude-adjacent showcase: this is what a consumer-grade data product looks like when treated as a publication, not a dashboard. A craft demo for the brand.
+    
+  
+
+  № 03
+  
+    Who opens it every morning
+    Personas · Jobs to be done
+  
+  
+    
+      Persona one
+      The morning-coffee curious
+      "I want a five-minute read with my coffee that makes me feel like I know what's happening in the world."
+      
+        Job: Replace a doom-scrolling habit with a delightful one.
+        Anchor: Daily ritual. Returns 3–5×/week.
+        Behaviors: Subscribes to The Browser, reads Lenny, screenshots things to share.
+      
+    
+    
+      Persona two
+      The newsroom researcher
+      "I need to know what readers are about to start searching for, before my editor asks."
+      
+        Job: Discover story angles by watching what's spiking before traditional news catches it.
+        Anchor: Professional utility. Daily login.
+        Behaviors: Uses Google Trends, follows muckrack, lives on Twitter.
+      
+    
+    
+      Persona three
+      The data-design tourist
+      "This is what I send my designer friends when something looks beautiful enough to argue about."
+      
+        Job: Find evidence of taste on the internet.
+        Anchor: Word-of-mouth virality. Returns when re-shared.
+        Behaviors: Follows Pudding, FlowingData, NYT graphics.
+      
+    
+  
+
+  № 04
+  
+    Five product principles
+    North stars · Design constraints
+  
+  
+    
+      
+        Principle № 01
+        Beauty is a feature
+        The product earns the right to exist on aesthetics alone. If a screenshot doesn't make someone stop scrolling, we've failed.
+      
+      
+        Principle № 02
+        The "why" is sacred
+        Showing what spiked is table stakes. Explaining why something spiked — pulling in news context, related articles, anomaly framing — is the actual product.
+      
+      
+        Principle № 03
+        Latency is a design choice
+        Hourly is real-time enough. We resist the pull toward second-by-second updates because pageviews are noisy at that resolution, and calm signal beats jittery signal.
+      
+    
+    
+      
+        Principle № 04
+        Less is the design
+        One map, one grid, one detail view. We don't add features; we deepen the existing ones. The map is navigation; the grid is the answer; the panel is the story.
+      
+      
+        Principle № 05
+        It reads like a publication
+        The chrome — masthead, edition number, dateline, sections — is borrowed from print. Visitors should feel like they're opening a daily, not a tool.
+      
+      "The only feature is the rendering. That's the whole point."
+    
+  
+
+  Interlude · This isn't a mockup
+  
+    A live preview
+    Real Wikipedia data · Rendering now in your browser
+  
+  
+    The map below isn't an illustration. It's pulling the actual top-read English Wikipedia articles per country, querying the Wikimedia Pageviews API directly from this page. Hover a country for its top three. Click to load its full top ten.
+  
+  
+    
+      
+        WikiPulse · The World
+        177 countries · Click any one to load its top reads
+      
+      
+        
+        Streaming · Hover any country
+      
+    
+    
+      
+      Loading country boundaries and top-read articles…
+    
+    
+    
+    
+      Top reads
+      —
+      
+    
+    
+      Pre-loaded
+      Click to load
+      Hover
+      Selected
+    
+    
+    
+      
+        
+        
+          
+          
+          
+          
+          
+        
+        
+          
+          
+          
+          
+          
+        
+      
+    
+  
+  If you're seeing the styled illustration above instead of a live map, your network may be blocking the topojson CDN or the Wikimedia API. The full interactive version lives in wiki-pulse-prototype.html — open it in a regular browser tab to see live data.
+
+  № 05
+  
+    The product, screen by screen
+    Views · Interactions · Feature scope
+  
+
+  
+    Wiki Pulse is structurally a single page with one fixed surface and three contextual layers. The whole thing fits comfortably on one URL.
+  
+
+  
+    
+      The World
+      A full-bleed interactive world map that takes over the viewport below the masthead. Rendered in a Natural Earth projection — the kind you'd see in a print atlas, not a developer tool. Each country starts neutral; the top thirty countries by Wikipedia traffic are pre-loaded so a hover reveals their top three articles instantly. Click any country to load up to its top ten into the grid below. Zoom out to global and the grid expands to the world's top fifty.
+      The headline question, the lede, and the live stats overlay the map as a glassy dark panel on the left — backdrop-blurred so the world shows through faintly. Region pills and the reset chip float in a second overlay on the top right. A soft "↓ scroll for the top 50" hint at the bottom center invites you past the fold.
+      
+        
+          Global view
+          Top 50
+          articles, ranked worldwide
+        
+        
+          Per country
+          Up to 10
+          articles per region or country
+        
+      
+    
+    
+      
+        
+          
+          
+            
+            
+            
+            
+            
+          
+          
+            
+            
+            
+            
+            
+          
+        
+      
+      The World — Natural Earth projection, country selection highlighted in red.
+    
+  
+
+  
+    
+      
+        
+          № 01
+        
+        
+          № 02
+        
+        
+          № 03
+        
+      
+      The Grid — editorial-style card layout, top item gets a featured spread.
+    
+    
+      The Grid
+      Below the map, articles render as cards: thumbnail (from Wikipedia's Page Summary API), title, one-line description, view count, and rank-change indicator (▲ ▼ NEW). The grid shows up to fifty in the global view, up to ten when a country or region is selected. The top article always gets a featured spread — twice the height, twice the width, with the full article extract.
+      A subtle category kicker — Politics, Screen, Sport, Music, Science, Letters, History, Places — gives each card editorial framing without requiring human curation.
+    
+  
+
+  
+    
+      The Article
+      A side panel that slides in from the right. Hero image at the top. Then: title, description, "Why is everyone reading this?" callout with an anomaly explanation and a 48-hour sparkline, key stats (views, rank, peak hour), Wikipedia's article extract with a drop cap, and a deep link to the full article.
+      This is where the bulk of the engagement happens. The stream is the hook; the detail panel is the payoff.
+    
+    
+      
+      SCREEN · TRENDING
+      Russell Crowe
+      New Zealand-born actor
+      
+        Why is everyone reading this?
+        Surging — pageviews are 5.4× normal. Something happened.
+      
+      
+        
+        
+      
+      The Article — slide-in detail panel with anomaly framing.
+    
+  
+
+  № 06
+  
+    The data, end to end
+    APIs · Latency · Caching
+  
+
+  
+    
+      Endpoint
+      URL · Notes
+      Latency
+    
+    
+      
+        Top by views (global)
+        Daily list of top 1,000 articles by pageviews.
+      
+      https://wikimedia.org/api/rest_v1/metrics/pageviews/top/en.wikipedia/all-access/{yyyy}/{mm}/{dd}Returns the previous day's top articles by midnight UTC the following day. Filter out Main_Page, Special:*, and namespace-prefixed entries.
+      Daily
+    
+    
+      
+        Top per country
+        Daily list of top 1,000 articles read from a specific country.
+      
+      https://wikimedia.org/api/rest_v1/metrics/pageviews/top-per-country/{ISO-3166-1-alpha-2}/all-access/{yyyy}/{mm}/{dd}Returns articles with privacy-rounded counts (views_ceil). Only surfaces articles with >100 views in the period. Powers every country click on the map.
+      Daily
+    
+    
+      
+        Per-article hourly
+        Hourly time series for any single article (used in the detail panel).
+      
+      https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents/{article}/hourly/{startYYYYMMDDHH}/{endYYYYMMDDHH}~1-hour lag. Drives the article-level sparkline and "why is this spiking" engine.
+      Hourly
+    
+    
+      
+        Country boundaries
+        TopoJSON world atlas used to render the map.
+      
+      https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json~100KB. Uses ISO 3166-1 numeric country IDs; we translate to alpha-2 client-side for the API. Loaded once, cached at the CDN edge.
+      Static
+    
+    
+      
+        Page Summary
+        Thumbnail, description, extract, canonical URL.
+      
+      https://en.wikipedia.org/api/rest_v1/page/summary/{title}Includes thumbnail and originalimage, displaytitle (with italics for film/book titles), short description, and a 200-character extract.
+      Static
+    
+    
+      
+        EventStreams
+        SSE feed of recent changes across Wikimedia.
+      
+      https://stream.wikimedia.org/v2/stream/recentchangeOptional. Useful for showing a sub-component live edit ticker — "people are editing this article right now" on the detail panel.
+      Real-time
+    
+  
+
+  
+    Latency reality check. Wikipedia's "top" and "top-per-country" endpoints are daily and lag by about 24 hours — the freshest pulse you can get is "yesterday's top reads, by country." Per-article hourly (used in the detail panel) lags by about an hour. The product reads as "live" because the map refreshes hourly against the most recent published day; in practice the freshest data point is roughly a day old. This is fine — frame it editorially as "yesterday's pulse, refreshed hourly."
+    Rate limits. Wikimedia is rolling out new published rate limits across spring 2026. The historical anonymous ceiling is ~200 req/sec across the REST API. The country-level endpoint is the highest-volume call (one request per country a user explores) — we mitigate by pre-loading the top thirty countries on page paint, then lazy-loading the rest on click. Always set a descriptive User-Agent with a contact address, cache aggressively at the edge, and never re-poll within the freshness window.
+    Country-data caveat. The top-per-country endpoint returns views_ceil — privacy-rounded ceiling values, not raw counts — and only surfaces articles that received more than 100 views in the period from that country. Small countries may return short or empty lists. We treat empty results as a real editorial signal ("Wikipedia doesn't surface pageview data for this country today") rather than as an error.
+  
+
+  № 07
+  
+    Architecture & the tech
+    System diagram · Stack · Hosting
+  
+
+  
+    System overview
+    
+      
+      
+        
+        Pageviews API
+        /metrics/pageviews/top
+      
+      
+        
+        Top per country
+        /pageviews/top-per-country
+      
+      
+        
+        Page Summary
+        /page/summary/{title}
+      
+      
+        
+        World atlas (topojson)
+        world-atlas / countries-110m
+      
+
+      
+      
+        
+        Edge cache + worker
+        CDN-cached JSON · 15-min TTL
+        
+        • Pre-loads top 30 countries
+        • Country-code resolution (numeric→α2)
+        • Adds news-context lookups
+        • Single JSON payload to client
+      
+
+      
+      
+        
+        Browser client
+        Next.js · D3 · Tailwind
+        
+        • World map (D3 geo · Natural Earth)
+        • Card grid · Detail panel
+        • Optimistic UX, skeleton load
+        • OG-image generator for shares
+      
+
+      
+      
+        
+        
+        
+        
+      
+      
+        
+        
+      
+
+      
+      SOURCE · WIKIMEDIA APIS (FREE, ANONYMOUS) →  EDGE CACHE  →  CLIENT
+    
+    
+      ● Pull (cron + lazy)
+      ● Push (SSE, optional)
+      ● Cache layer (CDN-edge)
+    
+  
+
+  
+    
+      Stack choices
+      
+        Next.js 15
+        React Server Components
+        D3 v7 + d3-geo
+        topojson-client
+        world-atlas
+        Tailwind v4
+        Fraunces + Inter
+        Edge worker for cache
+        Cloudflare KV / Redis
+        @vercel/og for share images
+      
+      A static-first architecture. The page is server-rendered with the most recent cached snapshot, then hydrates and refreshes hourly. No database in v1 — KV is enough for the snapshot and the news-context cache.
+    
+    
+      Caching policy
+      
+        Global top list → Refreshed at :05 past every hour. Cached at the edge with a 30-minute TTL.
+        Top per country → Pre-loaded for the top 30 countries on snapshot generation. Other countries fetched lazily on first click, then cached for the lifetime of the snapshot.
+        World atlas → Loaded once per page, ~100KB. Cached at the CDN forever (it doesn't change).
+        Page Summary → Cached 24 hours (changes rarely). LRU-evicted by usage so popular articles stay warm.
+      
+    
+  
+
+  № 08
+  
+    The "why" engine
+    Spike detection · Context · Editorial framing
+  
+  
+    
+      The defining feature of Wiki Pulse isn't the chart. It's the moment of recognition when a user sees a name spike and the product tells them why.
+      The "why" is calculated in three layers, each independent and each adding signal.
+    
+    
+      
+        Layer 01 · Numerical
+        Anomaly framing
+        Compare the last six hours of pageviews to the baseline of the prior 42 hours. A ratio above 2× becomes "Climbing fast." Above 4× becomes "Massive surge." A rank delta above +20 becomes "Vaulted X ranks."
+      
+      
+        Layer 02 · Editorial
+        News context
+        For each surging article, query a news API (NewsAPI, GDELT, or a curated RSS pool) with the article title scoped to the last 24 hours. Surface the highest-cited headline. "Russell Crowe spikes 5.4×. Top story: 'Crowe makes surprise appearance at Cannes.'"
+      
+      
+        Layer 03 · Wikipedia-native
+        Edit & link signal
+        Surging articles often see editing activity. EventStreams tells us when a top article was edited in the last hour. Wikidata tells us if the article is connected to a current event (an election, an awards show, a death).
+      
+    
+  
+
+  № 09
+  
+    MVP · v1 · v1.5 · v2
+    Scope · Sequencing
+  
+  
+    
+      Phase 01 · Six weeks
+      v1
+      The publication
+      
+        Masthead, hero, interactive world map, card grid, detail panel
+        Global top + top-per-country from yesterday
+        Pre-loaded data for top 30 countries by traffic
+        Region filter pills (Americas, Europe, Asia, Africa, Oceania)
+        Numerical "why" engine (Layer 01 only)
+        Editorial categories from page descriptions
+        Static OG image per page; share-as-screenshot ergonomics
+        Mobile-first responsive layout
+      
+    
+    
+      Phase 02 · Quarter two
+      v1.5
+      The editorial layer
+      
+        News-context "why" (Layer 02)
+        "Where it's hottest" — article detail shows top 5 countries
+        Daily email digest — "Yesterday's pulse, by country"
+        RSS feed of top stories per region
+        Time machine — browse any day's map
+        Multi-language toggles (en, es, ja, de)
+        Country-pair compare ("What does the US read that Japan doesn't?")
+      
+    
+    
+      Phase 03 · Quarter three+
+      v2
+      The platform
+      
+        Embeddable widgets (newsroom + blog)
+        Alerts — "Tell me when X spikes"
+        Categories as standalone pages
+        Anomaly leaderboards
+        Public "Pulse API" for builders
+        Annual edition — "What humanity read in 2026"
+      
+    
+  
+
+  № 10
+  
+    What success looks like
+    North star · Leading indicators
+  
+  
+    North star: Daily returning readers who treat Wiki Pulse as a morning ritual.
+  
+  
+    
+      Engagement
+      3×/wk
+      Median returning user opens the page three days per week by month three.
+    
+    
+      Depth
+      5+
+      Median session opens five article detail panels — the "why" is the engagement loop.
+    
+    
+      Virality
+      1.15
+      K-factor target via screenshot-and-share. Goal is share rate, not viral rate.
+    
+    
+      Stillness
+      04:30
+      Median time-on-site of 4½ minutes. We want a calm read, not a doom scroll.
+    
+  
+
+  № 11
+  
+    Risks & open questions
+    What could go wrong
+  
+  
+    
+      Bot contamination
+      Wikipedia pageviews include bot traffic. The "all-access" filter helps but isn't perfect. Mitigation: use the "user" agent filter for spikes detection (filters out automated requests).
+      Medium
+    
+    
+      Rate-limit changes
+      Wikimedia is rolling out new rate limits through April–May 2026. Our load is small but we need to monitor; consider Wikimedia Enterprise's free tier as fallback for high-traffic spikes on launch day.
+      Medium
+    
+    
+      Daily lag
+      The "top" endpoint is yesterday's data, not today's. Some users will notice. Frame it editorially — "Yesterday's pulse, refreshed hourly" — rather than apologizing for it.
+      Low
+    
+    
+      Editorial responsibility
+      If a controversial figure spikes, we surface them prominently. Build a manual override list, with transparent reasoning, for cases where the algorithm clearly fails (e.g., harassment campaigns gaming pageviews).
+      High
+    
+    
+      Country-data gaps
+      The top-per-country endpoint only surfaces articles with >100 views in the period, and returns privacy-rounded counts. Small countries may have very short top lists or none at all. Frame empty results editorially ("Wikipedia doesn't surface enough signal for this country today") rather than as a bug.
+      Medium
+    
+    
+      Visual fatigue
+      A world map that always looks the same becomes noise. Tactic: a small "Most-changed since yesterday" indicator on countries whose top article moved. Plus daily editorial framing in v1.5 so each visit has a fresh narrative even when the map looks similar.
+      Low
+    
+    
+      "Why" failure
+      Sometimes nothing happened — an article just trends because of seasonal patterns or external linking. The product needs grace for "no notable event" cases. Default copy: "Holding steady in the public consciousness today."
+      Medium
+    
+  
+
+  № 12
+  
+    The build · v1 in six weeks
+    Sequence · Owners · Risks
+  
+  
+    
+      Week 01
+      API + caching layer
+      Stand up the edge worker, prove the three Wikimedia endpoints, cache JSON snapshots, expose a single client endpoint that returns the day's payload.
+    
+    
+      Week 02
+      World map
+      D3-geo with Natural Earth projection and a world-atlas TopoJSON. Country hover/click states, region filter pills, reset-to-global chip. Pre-load top 30 countries; lazy-load the rest. Visual that could screenshot well.
+    
+    
+      Week 03
+      Card grid + detail panel
+      Feature card, image-led layout, rank deltas, anomaly framing in the detail panel. Page Summary integration with display titles and drop caps.
+    
+    
+      Week 04
+      Typography + chrome
+      Fraunces wordmark, masthead, dateline, strap, edition number. Refine spacing pass. Mobile-first responsive across all three views.
+    
+    
+      Week 05
+      Share & SEO
+      Open Graph image generator (one per top article), social copy, sitemap, descriptive titles per detail page (deep-linkable). robots.txt that's friendly to crawlers.
+    
+    
+      Week 06
+      Polish & launch
+      Lighthouse to 95+. Skeleton loaders. Empty/error states. Soft launch to design Twitter and the Pudding crowd. Capture the screenshot moment.
+    
+  
+
+  № 13
+  
+    Design tokens
+    The visual system, in one page
+  
+
+  
+    What follows is a lift-and-drop reference for anyone extending the product. Colors, typography, spacing, and the components used across every screen. Copy the CSS variables straight from the prototype's :root.
+  
+
+  
+  Palette
+  
+    
+      
+      Ink
+      #14110f
+      Primary text, dark surfaces
+    
+    
+      
+      Paper
+      #f6f1e8
+      Background, light surfaces
+    
+    
+      
+      Accent
+      #d6361b
+      Selection, spikes, drop caps
+    
+    
+      
+      Paper warm
+      #ece4d3
+      Card fills, callouts
+    
+    
+      
+      Gold
+      #c6953a
+      Hourly badge, secondary emphasis
+    
+    
+      
+      Sage
+      #6b8e6a
+      Static badges, low-severity
+    
+    
+      
+      Teal
+      #2f5d62
+      Daily badge, quiet accents
+    
+    
+      
+      Muted
+      #6b5f50
+      Kickers, meta, timestamps
+    
+  
+
+  
+  Typography
+  
+    
+      Display · headlines
+      Fraunces
+      
+        H1 96px / 92% / -3px
+        H2 48px / 105% / -1.2px
+        H3 32px / 110% / -0.5px
+        Card 20-26px / 120% / -0.3px
+        Weights: 500, 600, 700, 900
+        Optical size: 144 for display
+      
+    
+    
+      UI · body · meta
+      Inter
+      
+        Body 15-16px / 150-160%
+        Small 13px / 145%
+        Kicker 10-11px / 0.18em tracking / uppercase
+        Weights: 400, 500, 600, 700
+        Numbers: tabular in stats blocks
+      
+    
+  
+
+  
+  Space, rhythm, radii
+  
+    
+      Grid
+      8pt base
+      Spacing scale: 4, 8, 12, 16, 24, 32, 40, 56, 72. Section vertical padding: 56–64px. Card padding: 20–28px. Container max-width: 1200px.
+    
+    
+      Radii
+      Sharp editorial
+      Cards: 4px. Overlay panels: 6–8px. Pills: 20px. Buttons: 4px. Never larger than 8px on primary surfaces — the aesthetic is print, not iOS.
+    
+    
+      Elevation
+      Restrained shadows
+      Card hover: 0 14px 40px rgba(20,17,15,0.16). Detail panel: -20px 0 60px rgba(20,17,15,0.18). Glassy overlay: 0 24px 60px rgba(0,0,0,0.45). Otherwise avoid shadow.
+    
+  
+
+  
+  Key components
+  
+    
+      Component
+      Notes
+      Where it lives
+    
+    
+      Masthead64px · sticky · paper background · slim nameplate
+      "WikiPulse" wordmark in Fraunces 900, 28px. Live dot + date + edition on right. 1px ink border-bottom. z-index 80 so it stays above the map on scroll.
+      Top of every page
+    
+    
+      Map stagecalc(100vh − 64px) · full-bleed · #0c0a08
+      Natural Earth projection, shifted 6% right on wide screens. Countries fill rgba(246,241,232,0.05); pre-loaded 0.16; hover accent-soft; selected accent. Radial vignette layered on top for depth.
+      Landing viewport
+    
+    
+      Glassy overlaybackdrop-filter: blur(24px) saturate(140%)
+      Semi-transparent ink (rgba(20,17,15,0.66)) with 1px paper border. Three variants: headline (left, centered), controls (top-right), legend (bottom-left). Border radius 8px.
+      Over map stage
+    
+    
+      Region pill6×12 padding · 20px radius · uppercase
+      Inactive: rgba(246,241,232,0.08). Active: accent fill, paper text. Six pills: All, Americas, Europe, Asia, Africa, Oceania. Region filter dims out-of-region countries to 28% opacity.
+      Controls overlay
+    
+    
+      View chipPaper fill · 24px radius · Fraunces label
+      Shows current context: "Global" (accent text) or "United States" (ink text, with × button to reset). × is a 22px ink circle that goes accent on hover.
+      Controls overlay
+    
+    
+      Article card4px radius · #fdfaf3 fill · 16:10 image
+      Rank badge top-left, delta badge top-right. Kicker → title (Fraunces 20px) → 2-line description → views footer. Feature card spans 2×2 with 32px title and 3-line extract.
+      Grid section
+    
+    
+      Detail panel540px · slides right → 0.35s cubic-bezier
+      Sticky close bar on top, 16:10 hero image, kicker, 44px Fraunces title, italic description, meta row (views/rank/context), full extract with 56px accent drop cap, deep link to Wikipedia.
+      Overlays everything
+    
+  
+
+  
+    Every value above is a CSS variable or literal in the prototype. Search --accent, --paper, or .map-overlay to trace anything back to its source.
+  
+
+  № 14
+  
+    Open questions for decision
+    Asks before greenlight
+  
+  
+    
+      Domain · wikipulse.live or thepulse.app?
+      The brief reserves wikipulse.live; thepulse.app reads more like a publication and travels better in print contexts. Recommendation: secure both, lead with wikipulse.live for v1.
+    
+    
+      News-context API choice
+      NewsAPI is cheapest; GDELT is free but harder to parse; a custom RSS pool is most controllable. Recommendation: GDELT for v1.5 (free, fast, structured), graduate later if needed.
+    
+    
+      Multi-language at launch?
+      English-only is faster to ship. But the "world's curiosity" framing only fully delivers across languages. Recommendation: English at v1, surface a "Coming soon" toggle, add Spanish + Japanese in v1.5.
+    
+    
+      Brand: standalone or Amplitude-adjacent?
+      Wiki Pulse can be a pure consumer brand, or a "by Amplitude" project. The publication aesthetic argues for standalone. Recommendation: standalone brand, Amplitude credit in the colophon.
+    
+  
+
+// =====================================================================
+// Live World preview — embedded in the spec doc
+// Pulls the country boundaries (topojson) + Wikipedia top-per-country
+// data, renders an interactive Natural Earth projection.
+// Falls back gracefully to a styled illustration if the network is blocked.
+// =====================================================================
+(function () {
+  const NUM_TO_A2 = {
+    "032":"AR","036":"AU","040":"AT","056":"BE","076":"BR","100":"BG","124":"CA","152":"CL","156":"CN","158":"TW","170":"CO","191":"HR","203":"CZ","208":"DK","218":"EC","246":"FI","250":"FR","276":"DE","300":"GR","320":"GT","344":"HK","348":"HU","356":"IN","360":"ID","364":"IR","372":"IE","376":"IL","380":"IT","388":"JM","392":"JP","398":"KZ","404":"KE","410":"KR","422":"LB","428":"LV","434":"LY","440":"LT","442":"LU","458":"MY","484":"MX","504":"MA","528":"NL","554":"NZ","566":"NG","578":"NO","586":"PK","591":"PA","604":"PE","608":"PH","616":"PL","620":"PT","634":"QA","642":"RO","643":"RU","682":"SA","702":"SG","703":"SK","704":"VN","705":"SI","710":"ZA","724":"ES","752":"SE","756":"CH","760":"SY","762":"TJ","764":"TH","780":"TT","784":"AE","788":"TN","792":"TR","800":"UG","804":"UA","818":"EG","826":"GB","834":"TZ","840":"US","858":"UY","862":"VE"
+  };
+  const PRELOAD = ['US','GB','IN','DE','JP','BR','FR','IT','ES','CA','AU','MX','RU','NL','ID','PL','TR','SE','KR','NO'];
+  const IS_REAL = (a) => a && !a.startsWith('Special:') && !a.startsWith('Wikipedia:') && !a.startsWith('Portal:') && !a.startsWith('File:') && !a.startsWith('Category:') && !a.startsWith('Help:') && !a.startsWith('Talk:') && a !== 'Main_Page' && a !== '-';
+  const SHORT = (n) => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'k' : String(n);
+  const pad = (n) => String(n).padStart(2,'0');
+
+  function reportDate() {
+    const d = new Date(Date.now() - 36 * 3600 * 1000);
+    return { y: d.getUTCFullYear(), m: pad(d.getUTCMonth()+1), dd: pad(d.getUTCDate()) };
+  }
+
+  async function fetchCountryTop(code) {
+    const r = reportDate();
+    const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/top-per-country/${code}/all-access/${r.y}/${r.m}/${r.dd}`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const articles = (data.items?.[0]?.articles || [])
+        .filter(a => IS_REAL(a.article))
+        .filter(a => !a.project || a.project.startsWith('en'))
+        .map(a => ({ article: a.article, views: a.views_ceil || a.views || 0, rank: a.rank }))
+        .slice(0, 10);
+      return articles;
+    } catch (e) { return null; }
+  }
+
+  const cache = new Map();
+  const countryNames = new Map();
+
+  function showCountryList(name, articles) {
+    const out = document.getElementById('liveCountryOut');
+    document.getElementById('liveCountryName').textContent = name;
+    const list = document.getElementById('liveCountryList');
+    if (!articles || articles.length === 0) {
+      list.innerHTML = `<li style="font-style:italic;color:rgba(246,241,232,0.5);">Wikipedia doesn't surface country-level pageviews for ${name}.</li>`;
+    } else {
+      list.innerHTML = articles.slice(0, 10).map(a => `<li>${a.article.replace(/_/g, ' ')}</li>`).join('');
+    }
+    out.classList.add('show');
+  }
+
+  async function chunkedFetch(items, fn, size = 4) {
+    for (let i = 0; i < items.length; i += size) {
+      await Promise.all(items.slice(i, i + size).map(fn));
+    }
+  }
+
+  async function renderMap() {
+    const topoUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+    const topo = await fetch(topoUrl).then(r => {
+      if (!r.ok) throw new Error('topojson load failed');
+      return r.json();
+    });
+    const countries = topojson.feature(topo, topo.objects.countries).features;
+    countries.forEach(c => countryNames.set(String(c.id).padStart(3,'0'), c.properties.name));
+
+    const stage = document.getElementById('liveStage');
+    const svg = d3.select('#liveWorld');
+    svg.style('display', 'block');
+    svg.selectAll('*').remove();
+    const width = stage.clientWidth - 56;
+    const height = 360;
+    svg.attr('viewBox', `0 0 ${width} ${height}`);
+
+    const projection = d3.geoNaturalEarth1().fitSize([width, height - 20], { type: 'Sphere' });
+    const path = d3.geoPath(projection);
+
+    svg.append('path').attr('class', 'outline').attr('d', path({ type: 'Sphere' }));
+    svg.append('path').attr('class', 'graticule').attr('d', path(d3.geoGraticule10()));
+
+    const tip = document.getElementById('liveTip');
+
+    svg.selectAll('path.country')
+      .data(countries)
+      .enter()
+      .append('path')
+      .attr('class', d => {
+        const num = String(d.id).padStart(3, '0');
+        const a2 = NUM_TO_A2[num];
+        return 'country' + (PRELOAD.includes(a2) ? ' has-data' : '');
+      })
+      .attr('d', path)
+      .attr('data-num', d => String(d.id).padStart(3, '0'))
+      .on('mousemove', function(ev, d) {
+        const num = String(d.id).padStart(3, '0');
+        const a2 = NUM_TO_A2[num];
+        const c = a2 ? cache.get(a2) : null;
+        let top = '';
+        if (c && c.length > 0) {
+          top = `<span class="t">${d.properties.name}</span><span class="v">Top: ${c.slice(0,2).map(a => a.article.replace(/_/g,' ')).join(' · ')}</span>`;
+        } else {
+          top = `<span class="t">${d.properties.name}</span><span class="v">Click to load top reads</span>`;
+        }
+        tip.innerHTML = top;
+        const rect = stage.getBoundingClientRect();
+        let left = ev.clientX - rect.left + 14;
+        if (left + 280 > rect.width) left = ev.clientX - rect.left - 296;
+        tip.style.left = left + 'px';
+        tip.style.top = (ev.clientY - rect.top - 24) + 'px';
+        tip.style.opacity = 1;
+      })
+      .on('mouseleave', () => { tip.style.opacity = 0; })
+      .on('click', async function(ev, d) {
+        const num = String(d.id).padStart(3, '0');
+        const a2 = NUM_TO_A2[num];
+        d3.selectAll('.live-stage svg.world path.country').classed('selected', false);
+        d3.select(this).classed('selected', true);
+        if (!a2) {
+          showCountryList(d.properties.name, null);
+          return;
+        }
+        let articles = cache.get(a2);
+        if (!articles) {
+          articles = await fetchCountryTop(a2);
+          if (articles) cache.set(a2, articles);
+        }
+        showCountryList(d.properties.name, articles);
+      });
+
+    // Pre-load top countries for hover previews
+    document.getElementById('liveStatusText').textContent = 'Pre-loading top countries…';
+    await chunkedFetch(PRELOAD, async (code) => {
+      if (cache.has(code)) return;
+      const articles = await fetchCountryTop(code);
+      if (articles) cache.set(code, articles);
+    }, 4);
+
+    document.getElementById('liveStatusText').textContent = 'Streaming · Hover any country';
+    document.getElementById('liveSubtitle').textContent = `${countries.length} countries · Click any one to load its top reads`;
+  }
+
+  async function boot() {
+    const stage = document.getElementById('liveStage');
+    const loading = document.getElementById('liveLoading');
+    try {
+      await renderMap();
+      loading.style.display = 'none';
+    } catch (e) {
+      console.warn('Wiki Pulse live preview fallback:', e);
+      stage.classList.add('errored');
+      document.getElementById('liveSubtitle').textContent = 'Network unreachable — showing illustrated preview';
+      document.getElementById('liveStatusText').textContent = 'Offline mode';
+      loading.style.display = 'none';
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(boot, 150));
+  } else {
+    setTimeout(boot, 150);
+  }
+})();
+
+  "What is the world reading on Wikipedia right now?"
+  Wiki Pulse · Concept brief · Prepared for Nikhil · Amplitude · May 19, 2026
