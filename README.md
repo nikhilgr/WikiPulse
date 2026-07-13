@@ -1,5 +1,7 @@
 # WikiPulse
 
+A cultural zeitgeist built on Wikipedia trends across the globe.
+
 WikiPulse is a production-ready static app for exploring what the world is reading on Wikipedia. It ships with local snapshot data so the app works even when live Wikimedia requests are slow or blocked, and it upgrades to live data in the browser when available.
 
 ## Local Development
