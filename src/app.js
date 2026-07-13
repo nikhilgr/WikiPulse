@@ -222,8 +222,9 @@ async function fetchSeries(article, options = {}) {
       const data = await loadJSON(url, 5000);
       const series = (data.items || []).map((it) => ({ t: it.timestamp.slice(0, 8), v: it.views }));
       if (series.length) {
-        state.seriesCache.set(article, series);
-        return series;
+        const merged = mergeFlowSeries(state.seriesCache.get(article) || [], series);
+        state.seriesCache.set(article, merged);
+        return merged;
       }
     } catch {
       // Snapshot fallback below.
@@ -231,6 +232,13 @@ async function fetchSeries(article, options = {}) {
   }
 
   return state.seriesCache.get(article) || [];
+}
+
+function mergeFlowSeries(base, incoming) {
+  const byDate = new Map();
+  base.forEach((point) => byDate.set(point.t, point));
+  incoming.forEach((point) => byDate.set(point.t, point));
+  return [...byDate.values()].sort((a, b) => a.t.localeCompare(b.t));
 }
 
 function flowEndDate() {
@@ -533,14 +541,15 @@ function renderFlow() {
   if (cast.length < 3) return;
 
   const keys = cast.map((a) => a.article);
+  const seriesByKey = Object.fromEntries(keys.map((key) => [key, state.seriesCache.get(key) || []]));
   const dateSet = new Set();
-  keys.forEach((key) => state.seriesCache.get(key).forEach((point) => dateSet.add(point.t)));
+  keys.forEach((key) => seriesByKey[key].forEach((point) => dateSet.add(point.t)));
   const dates = [...dateSet].sort();
-  const flowStats = Object.fromEntries(keys.map((key) => [key, flowSeriesStats(state.seriesCache.get(key) || [])]));
+  const flowStats = Object.fromEntries(keys.map((key) => [key, flowSeriesStats(seriesByKey[key])]));
   const rawRows = dates.map((t) => {
     const row = { t };
     keys.forEach((key) => {
-      row[key] = state.seriesCache.get(key).find((point) => point.t === t)?.v || 0;
+      row[key] = flowValueAt(seriesByKey[key], t);
     });
     return row;
   });
@@ -554,7 +563,8 @@ function renderFlow() {
   const rows = rawRows.map((raw, index) => {
     const row = { t: raw.t };
     const progress = index / Math.max(rawRows.length - 1, 1);
-    const leftExpansion = 1 + Math.pow(Math.max(0, 1 - progress), 1.7) * .48;
+    const floorRamp = .66 + Math.min(1, Math.pow(progress / .095, .72)) * .34;
+    const leftExpansion = floorRamp * (1 + Math.pow(Math.max(0, 1 - progress), 1.55) * .48);
     keys.forEach((key) => {
       const rawValue = raw[key];
       const stats = flowStats[key];
@@ -642,6 +652,25 @@ function renderFlow() {
 
   state.flowReady = true;
   hydrateLiveFlowSeries();
+}
+
+function flowValueAt(series, t) {
+  if (!series.length) return 0;
+  const exact = series.find((point) => point.t === t);
+  if (exact) return exact.v;
+  if (t <= series[0].t) return series[0].v;
+  if (t >= series[series.length - 1].t) return series[series.length - 1].v;
+  const nextIndex = series.findIndex((point) => point.t > t);
+  const before = series[nextIndex - 1];
+  const after = series[nextIndex];
+  if (!before || !after) return before?.v || after?.v || 0;
+  const span = Math.max(1, flowDateMs(after.t) - flowDateMs(before.t));
+  const ratio = Math.max(0, Math.min(1, (flowDateMs(t) - flowDateMs(before.t)) / span));
+  return before.v + (after.v - before.v) * ratio;
+}
+
+function flowDateMs(t) {
+  return Date.UTC(+t.slice(0, 4), +t.slice(4, 6) - 1, +t.slice(6, 8));
 }
 
 function flowSeriesStats(series) {
