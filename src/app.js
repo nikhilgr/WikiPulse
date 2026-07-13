@@ -49,6 +49,7 @@ function bindEls() {
     flowTab: $("#flowTab"),
     heroCopy: $("#heroCopy"),
     flowCopy: $("#flowCopy"),
+    flowCards: $("#flowCards"),
     controls: $("#controls"),
     legend: $(".legend"),
     regionPills: $("#regionPills"),
@@ -521,7 +522,7 @@ function renderFlow() {
   const rect = mount.getBoundingClientRect();
   const width = Math.max(320, rect.width);
   const height = Math.max(360, rect.height);
-  const cast = getFlowCast().slice(0, width > 700 ? 14 : 9);
+  const cast = getFlowCast().slice(0, width > 700 ? 14 : 10);
   if (cast.length < 3) return;
 
   const keys = cast.map((a) => a.article);
@@ -568,6 +569,7 @@ function renderFlow() {
   mount.replaceChildren();
   const svg = d3.select(mount).append("svg").attr("viewBox", `0 0 ${width} ${height}`).attr("aria-hidden", "true");
   const bisect = d3.bisector((r) => parse(r.t)).center;
+  renderFlowCards(cast, rawRows);
 
   svg.append("g").selectAll("path")
     .data(layers)
@@ -602,11 +604,28 @@ function renderFlow() {
   state.flowReady = true;
 }
 
+function renderFlowCards(cast, rawRows) {
+  els.flowCards.replaceChildren();
+  const latest = rawRows[rawRows.length - 1] || {};
+  cast.slice(0, 10).forEach((article, index) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "flow-card";
+    card.style.setProperty("--flow-color", PALETTE[index % PALETTE.length]);
+    card.innerHTML = `
+      <span class="flow-card__rank">${String(index + 1).padStart(2, "0")}</span>
+      <span class="flow-card__title"></span>
+      <span class="flow-card__views">${shortNumber(latest[article.article] || article.views || 0)}</span>
+    `;
+    card.querySelector(".flow-card__title").textContent = article.title || articleTitle(article.article);
+    card.addEventListener("click", () => openArticle(article.article));
+    els.flowCards.append(card);
+  });
+}
+
 function getFlowCast() {
   const liveOverlap = state.globalTop.slice(0, 24).filter((article) => state.seriesCache.has(article.article));
-  if (liveOverlap.length >= 5) return liveOverlap;
-
-  return [...state.seriesCache.entries()]
+  const fallback = [...state.seriesCache.entries()]
     .map(([article, series], index) => {
       const summary = state.summaryCache.get(article) || {};
       const last = series[series.length - 1]?.v || 0;
@@ -624,12 +643,20 @@ function getFlowCast() {
       };
     })
     .sort((a, b) => b.flowScore - a.flowScore);
+
+  const seen = new Set(liveOverlap.map((article) => article.article));
+  const blended = [
+    ...liveOverlap,
+    ...fallback.filter((article) => !seen.has(article.article))
+  ];
+
+  return blended.length >= 5 ? blended : fallback;
 }
 
 function renderFlowLabels(svg, layers, rows, cast, x, y, parse, width) {
   const minIndex = Math.max(1, Math.floor(rows.length * .14));
   const maxIndex = Math.max(minIndex + 1, Math.floor(rows.length * .84));
-  const maxLabels = width > 900 ? 8 : 4;
+  const maxLabels = width > 900 ? 10 : 5;
   const placed = [];
   const candidates = layers.map((layer) => {
     let best = null;
@@ -694,6 +721,7 @@ function setHeroView(view) {
   els.flowMount.hidden = !flow;
   els.heroCopy.hidden = flow;
   els.flowCopy.hidden = !flow;
+  els.flowCards.hidden = !flow;
   els.controls.hidden = flow;
   els.legend.hidden = flow;
   els.mapTab.classList.toggle("active", !flow);

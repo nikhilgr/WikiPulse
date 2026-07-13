@@ -386,6 +386,78 @@ footer span {
   line-height: 1;
 }
 
+.flow-cards {
+  position: absolute;
+  top: 84px;
+  right: clamp(16px, 3.4vw, 48px);
+  z-index: 8;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: min(440px, calc(100vw - 32px));
+  padding: 10px;
+  border: 1px solid rgba(246, 241, 232, .10);
+  border-radius: 8px;
+  background: rgba(20, 17, 15, .58);
+  box-shadow: 0 20px 54px rgba(0, 0, 0, .36);
+  backdrop-filter: blur(20px) saturate(140%);
+}
+
+.flow-card {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 1px solid rgba(246, 241, 232, .10);
+  border-radius: 4px;
+  padding: 8px 10px;
+  background: rgba(246, 241, 232, .07);
+  color: var(--paper);
+  cursor: pointer;
+  text-align: left;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.flow-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(246, 241, 232, .24);
+  background: rgba(246, 241, 232, .12);
+}
+
+.flow-card::before {
+  content: "";
+  width: 9px;
+  height: 22px;
+  border-radius: 2px;
+  background: var(--flow-color);
+}
+
+.flow-card__rank {
+  color: rgba(246, 241, 232, .52);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.flow-card__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: Fraunces, Georgia, serif;
+  font-size: 14px;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+
+.flow-card__views {
+  color: rgba(246, 241, 232, .62);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
 .tip {
   position: absolute;
   z-index: 12;
@@ -928,6 +1000,26 @@ footer p {
 
   .flow-copy {
     top: 68px;
+  }
+
+  .flow-cards {
+    top: auto;
+    right: 16px;
+    bottom: 18px;
+    left: 16px;
+    display: flex;
+    width: auto;
+    overflow-x: auto;
+    padding: 8px;
+    scrollbar-width: none;
+  }
+
+  .flow-cards::-webkit-scrollbar {
+    display: none;
+  }
+
+  .flow-card {
+    min-width: 210px;
   }
 
   .grid-heading {
