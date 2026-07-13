@@ -28,6 +28,8 @@ const state = {
   countryNames: new Map(),
   topo: null,
   cardObserver: null,
+  flowHydrating: false,
+  flowHydratedThrough: "",
   mapReady: false,
   flowReady: false,
   heroView: "map"
@@ -206,12 +208,12 @@ async function fetchSummary(article) {
   }
 }
 
-async function fetchSeries(article) {
-  if (state.seriesCache.has(article)) return state.seriesCache.get(article);
+async function fetchSeries(article, options = {}) {
+  if (state.seriesCache.has(article) && !options.forceLive) return state.seriesCache.get(article);
 
   if (state.mode === "live") {
     try {
-      const end = new Date(Date.now() - 48 * 3600 * 1000);
+      const end = flowEndDate();
       const start = new Date(end.getTime() - 31 * 24 * 3600 * 1000);
       const stamp = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}00`;
       const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/${encodeURIComponent(article)}/daily/${stamp(start)}/${stamp(end)}`;
@@ -227,6 +229,10 @@ async function fetchSeries(article) {
   }
 
   return state.seriesCache.get(article) || [];
+}
+
+function flowEndDate() {
+  return new Date(Date.now() - 48 * 3600 * 1000);
 }
 
 function hydrateSnapshots(global, countries, daily) {
@@ -536,11 +542,11 @@ function renderFlow() {
     return row;
   });
   const values = rawRows.flatMap((row) => keys.map((key) => row[key])).filter((value) => value > 0).sort((a, b) => a - b);
-  const cap = Math.max(1, (d3.quantile(values, .92) || d3.max(values) || 1) * 1.35);
+  const cap = Math.max(1, (d3.quantile(values, .985) || d3.max(values) || 1) * 1.08);
   const rows = rawRows.map((raw) => {
     const row = { t: raw.t };
     keys.forEach((key) => {
-      row[key] = Math.pow(Math.min(raw[key], cap), .62);
+      row[key] = Math.pow(Math.min(raw[key], cap), .88);
     });
     return row;
   });
@@ -562,7 +568,7 @@ function renderFlow() {
   const yPad = Math.max(1, (yDomain[1] - yDomain[0]) * .08);
   const y = d3.scaleLinear()
     .domain([yDomain[0] - yPad, yDomain[1] + yPad])
-    .range([height - margin.bottom, margin.top]);
+    .range([height - margin.bottom + (width > 700 ? 18 : 0), margin.top]);
   const area = d3.area().x((_p, i) => x(parse(rows[i].t))).y0((p) => y(p[0])).y1((p) => y(p[1])).curve(d3.curveBasis);
 
   mount.replaceChildren();
@@ -593,13 +599,54 @@ function renderFlow() {
 
   renderFlowLabels(svg, layers, rows, cast, x, y, parse, width);
 
+  const endDate = parse(dates[dates.length - 1]);
+  const endLabel = endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).toUpperCase();
+  svg.append("text")
+    .attr("x", width - margin.right)
+    .attr("y", margin.top - 36)
+    .attr("text-anchor", "end")
+    .attr("fill", "#d6361b")
+    .attr("font-family", "Inter, sans-serif")
+    .attr("font-size", 10)
+    .attr("font-weight", 800)
+    .attr("letter-spacing", ".18em")
+    .text(`THROUGH ${endLabel} ->`);
+
+  const ticks = x.ticks(width > 800 ? 8 : 4);
+  if (!ticks.some((tick) => Math.abs(tick - endDate) < 12 * 3600 * 1000)) ticks.push(endDate);
   svg.append("g")
     .attr("transform", `translate(0,${height - margin.bottom})`)
-    .call(d3.axisBottom(x).ticks(width > 800 ? 8 : 4).tickSizeOuter(0))
+    .call(d3.axisBottom(x).tickValues(ticks).tickFormat(d3.utcFormat("%b %d")).tickSizeOuter(0))
     .call((g) => g.selectAll("text").attr("fill", "rgba(246,241,232,.64)").attr("font-size", 10).attr("font-weight", 700))
     .call((g) => g.selectAll("path,line").attr("stroke", "rgba(246,241,232,.18)"));
 
   state.flowReady = true;
+  hydrateLiveFlowSeries();
+}
+
+async function hydrateLiveFlowSeries() {
+  if (state.mode !== "live" || state.flowHydrating) return;
+  const through = flowEndKey();
+  if (state.flowHydratedThrough === through) return;
+  const targets = state.globalTop.slice(0, 18).filter((article) => article.article && !BAD_ARTICLE.test(article.article));
+  if (!targets.length) return;
+
+  state.flowHydrating = true;
+  try {
+    for (let i = 0; i < targets.length; i += 4) {
+      await Promise.all(targets.slice(i, i + 4).map((article) => fetchSeries(article.article, { forceLive: true }).catch(() => [])));
+    }
+    state.flowHydratedThrough = through;
+    state.flowReady = false;
+    if (state.heroView === "flow") renderFlow();
+  } finally {
+    state.flowHydrating = false;
+  }
+}
+
+function flowEndKey() {
+  const d = flowEndDate();
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}`;
 }
 
 function getFlowCast() {
@@ -707,6 +754,7 @@ function setHeroView(view) {
   els.mapTab.setAttribute("aria-selected", String(!flow));
   els.flowTab.setAttribute("aria-selected", String(flow));
   if (flow && !state.flowReady) renderFlow();
+  if (flow) hydrateLiveFlowSeries();
 }
 
 function relatedArticles(article) {
@@ -872,6 +920,7 @@ async function boot() {
     if (!state.selectedA2) renderCards(state.globalTop, "globally");
     state.flowReady = false;
     if (state.heroView === "flow") renderFlow();
+    hydrateLiveFlowSeries();
     showToast("Live Wikimedia data loaded.");
   }).catch(() => {});
 }
