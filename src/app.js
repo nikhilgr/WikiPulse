@@ -14,6 +14,7 @@ const PALETTE = ["#d6361b", "#c6953a", "#6b8e6a", "#2f5d62", "#a85c8a", "#e2a93d
 const STOP = new Set(["about", "after", "also", "because", "between", "during", "from", "into", "over", "their", "there", "this", "that", "with", "were", "which", "while"]);
 const BAD_ARTICLE = /^(Special:|Wikipedia:|Portal:|File:|Category:|Help:|Talk:|Template:|Main_Page$|-)/;
 const FLOW_STORY_COUNT = 10;
+const FLOW_LABEL_MIN = 12;
 
 const state = {
   mode: "snapshot",
@@ -545,6 +546,11 @@ function renderFlow() {
   });
   const values = rawRows.flatMap((row) => keys.map((key) => row[key])).filter((value) => value > 0).sort((a, b) => a - b);
   const cap = Math.max(1, (d3.quantile(values, .985) || d3.max(values) || 1) * 1.08);
+  const displayFloors = Object.fromEntries(keys.map((key) => {
+    const stats = flowStats[key];
+    const floorBase = Math.min(cap, Math.max(stats.median, stats.latest * .16, stats.peak * .08, 1));
+    return [key, Math.pow(floorBase, .72) * .38];
+  }));
   const rows = rawRows.map((raw) => {
     const row = { t: raw.t };
     keys.forEach((key) => {
@@ -552,7 +558,8 @@ function renderFlow() {
       const stats = flowStats[key];
       const ratio = Math.min(8, rawValue / Math.max(stats.median, 1));
       const surgeLift = .74 + Math.pow(Math.max(ratio, .05), .52) * .24;
-      row[key] = Math.pow(Math.min(rawValue, cap), .72) * surgeLift;
+      const shaped = Math.pow(Math.min(rawValue, cap), .72) * surgeLift;
+      row[key] = displayFloors[key] + shaped * .88;
     });
     return row;
   });
@@ -758,7 +765,7 @@ function renderFlowLabels(svg, layers, rows, cast, x, y, parse, width) {
     const candidate = choices.find((choice) => {
       const article = cast.find((item) => item.article === choice.key);
       const title = article?.title || articleTitle(choice.key);
-      const fontSize = Math.max(9, Math.min(23, choice.thickness * .38));
+      const fontSize = Math.max(FLOW_LABEL_MIN, Math.min(23, choice.thickness * .38));
       const textWidth = Math.min(width * .28, title.length * fontSize * .54);
       const box = {
         x0: choice.x - textWidth / 2 - 8,
@@ -777,7 +784,7 @@ function renderFlowLabels(svg, layers, rows, cast, x, y, parse, width) {
     if (!candidate) continue;
     const article = cast.find((item) => item.article === candidate.key);
     const title = candidate.title || article?.title || articleTitle(candidate.key);
-    const fontSize = candidate.fontSize || 9;
+    const fontSize = candidate.fontSize || FLOW_LABEL_MIN;
     const textWidth = Math.min(width * .24, title.length * fontSize * .5);
     const box = candidate.box || {
       x0: candidate.x - textWidth / 2 - 6,
