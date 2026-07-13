@@ -929,26 +929,61 @@ function trendCopy(series, views) {
   return { why: "Steady - holding near its 30-day norm.", trend: `${r}x` };
 }
 
-async function fetchArticleSections(article) {
+function titleCaseSection(section) {
+  const small = new Set(["and", "or", "of", "the", "a", "an", "to", "in", "on", "for", "with", "at", "by", "from", "vs"]);
+  return section.split(/\s+/).map((word, index) => {
+    if (index > 0 && small.has(word.toLowerCase())) return word.toLowerCase();
+    if (/^[A-Z0-9].*[A-Z]/.test(word) || /^\d/.test(word)) return word;
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }).join(" ");
+}
+
+async function fetchArticleActivity(article) {
   try {
-    const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(article)}&prop=sections&format=json&origin=*`;
+    const url = `https://en.wikipedia.org/w/api.php?action=query&prop=revisions&titles=${encodeURIComponent(article)}&rvlimit=200&rvprop=timestamp|comment&format=json&origin=*`;
     const data = await loadJSON(url, 4500);
-    return (data.parse?.sections || [])
-      .filter((section) => section.line && Number(section.toclevel || 1) <= 2)
-      .map((section) => section.line.replace(/<[^>]*>/g, "").trim())
-      .filter((line) => line && !/^(references|external links|notes|see also|bibliography|further reading)$/i.test(line))
-      .slice(0, 8);
+    const page = Object.values(data.query?.pages || {})[0];
+    const revisions = page?.revisions || [];
+    if (!revisions.length) return [];
+
+    const newest = new Date(revisions[0].timestamp).getTime();
+    let windowed = [];
+    for (const days of [2, 4, 7]) {
+      windowed = revisions.filter((revision) => newest - new Date(revision.timestamp).getTime() <= days * 864e5);
+      if (windowed.length >= 6) break;
+    }
+
+    const skip = /^(references|external links|sources|further reading|notes|bibliography|see also|top|infobox|in popular culture|popular culture|name|honou?rs|career statistics|statistics|club statistics|filmography|discography|images?|gallery|external media|contents?)$/i;
+    const sections = new Map();
+    windowed.forEach((revision) => {
+      const match = (revision.comment || "").match(/\/\*\s*([^*|]+?)\s*(\|[^*]*)?\*\//);
+      if (!match) return;
+      const raw = match[1].trim().replace(/\s*\([^)]*\)\s*$/, "").replace(/\s+\d+$/, "").trim();
+      if (!raw || raw.length > 46 || skip.test(raw)) return;
+      const key = raw.toLowerCase();
+      const current = sections.get(key) || { label: titleCaseSection(raw), count: 0 };
+      current.count += 1;
+      sections.set(key, current);
+    });
+
+    const ranked = [...sections.values()].sort((a, b) => b.count - a.count);
+    if (ranked.length < 2 && !(ranked[0] && ranked[0].count >= 3)) return [];
+    const max = ranked[0].count || 1;
+    return ranked.slice(0, 5).map((section) => ({
+      label: section.label,
+      value: Math.max(14, Math.round((section.count / max) * 100))
+    }));
   } catch {
     return [];
   }
 }
 
-function movementSections(article, summary, sections, series) {
-  const fallback = fallbackSections(article, summary);
-  const candidates = (sections.length ? sections : fallback).slice(0, 8);
+function movementSections(article, summary, activity, series) {
+  if (activity.length) return activity;
+  const fallback = fallbackSections(article, summary).slice(0, 8);
   const stats = flowSeriesStats(series || []);
   const extractTokens = new Set(tokens(`${summary?.title || ""} ${summary?.desc || ""} ${summary?.extract || ""}`));
-  return candidates
+  return fallback
     .map((label, index) => {
       const labelTokens = tokens(label);
       const relevance = labelTokens.filter((token) => extractTokens.has(token)).length;
@@ -971,6 +1006,10 @@ function sectionIntentScore(label) {
 
 function fallbackSections(article, summary) {
   const category = categoryOf(summary?.desc || "");
+  const context = `${summary?.title || articleTitle(article)} ${summary?.desc || ""} ${summary?.extract || ""}`.toLowerCase();
+  if (/(death|died|dies|passed away|assassinated|killed|1955[–-]2026|1930[–-]2026|2026 death)/.test(context)) {
+    return ["Death", "Political Implications", "Electoral Implications", "Personal Life", "International"];
+  }
   if (category === "Sport") return ["Latest matches", "Career", "International play", "Records", "Public reaction"];
   if (category === "Power" || /politic/i.test(summary?.desc || "")) return ["Latest developments", "Political implications", "Career", "Public reaction", "Background"];
   if (/film|television|series|album|song|music/i.test(summary?.desc || "")) return ["Release", "Cast and production", "Reception", "Plot", "Background"];
@@ -1014,10 +1053,10 @@ async function openArticle(article) {
   setBackground(els.panelImage, "");
   els.spark.hidden = true;
 
-  const [summary, series, sections] = await Promise.all([
+  const [summary, series, activity] = await Promise.all([
     fetchSummary(article),
     fetchSeries(article),
-    fetchArticleSections(article)
+    fetchArticleActivity(article)
   ]);
   const finalTitle = summary.title || title;
   els.panelTitle.textContent = finalTitle;
@@ -1041,7 +1080,7 @@ async function openArticle(article) {
     els.spark.hidden = false;
   }
 
-  renderMovementSections(movementSections(article, summary, sections, series));
+  renderMovementSections(movementSections(article, summary, activity, series));
   renderRelated(article);
 }
 
