@@ -76,6 +76,9 @@ function bindEls() {
     spark: $("#spark"),
     sparkArea: $("#sparkArea"),
     sparkLine: $("#sparkLine"),
+    sparkDot: $("#sparkDot"),
+    storySectionsWrap: $("#storySectionsWrap"),
+    storySections: $("#storySections"),
     relatedWrap: $("#relatedWrap"),
     related: $("#related"),
     panelExtract: $("#panelExtract"),
@@ -894,13 +897,18 @@ function tokens(text) {
 function sparkPaths(series) {
   const d3 = window.d3;
   const width = 440;
-  const height = 72;
-  const padPx = 3;
+  const height = 96;
+  const padPx = 4;
   const xs = d3.scaleLinear().domain([0, series.length - 1]).range([padPx, width - padPx]);
   const ys = d3.scaleLinear().domain([0, d3.max(series, (p) => p.v) || 1]).range([height - padPx, padPx + 6]);
   const line = d3.line().x((_p, i) => xs(i)).y((p) => ys(p.v)).curve(d3.curveMonotoneX);
   const area = d3.area().x((_p, i) => xs(i)).y0(height - padPx).y1((p) => ys(p.v)).curve(d3.curveMonotoneX);
-  return { line: line(series), area: area(series) };
+  const last = series[series.length - 1];
+  return {
+    line: line(series),
+    area: area(series),
+    dot: { x: xs(series.length - 1), y: ys(last?.v || 0) }
+  };
 }
 
 function trendCopy(series, views) {
@@ -921,6 +929,70 @@ function trendCopy(series, views) {
   return { why: "Steady - holding near its 30-day norm.", trend: `${r}x` };
 }
 
+async function fetchArticleSections(article) {
+  try {
+    const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(article)}&prop=sections&format=json&origin=*`;
+    const data = await loadJSON(url, 4500);
+    return (data.parse?.sections || [])
+      .filter((section) => section.line && Number(section.toclevel || 1) <= 2)
+      .map((section) => section.line.replace(/<[^>]*>/g, "").trim())
+      .filter((line) => line && !/^(references|external links|notes|see also|bibliography|further reading)$/i.test(line))
+      .slice(0, 8);
+  } catch {
+    return [];
+  }
+}
+
+function movementSections(article, summary, sections, series) {
+  const fallback = fallbackSections(article, summary);
+  const candidates = (sections.length ? sections : fallback).slice(0, 8);
+  const stats = flowSeriesStats(series || []);
+  const extractTokens = new Set(tokens(`${summary?.title || ""} ${summary?.desc || ""} ${summary?.extract || ""}`));
+  return candidates
+    .map((label, index) => {
+      const labelTokens = tokens(label);
+      const relevance = labelTokens.filter((token) => extractTokens.has(token)).length;
+      const nameScore = sectionIntentScore(label);
+      const rankScore = Math.max(0, 8 - index) * 5;
+      const surgeScore = Math.min(38, Math.log2(Math.max(stats.surge, 1)) * 16);
+      const value = Math.max(12, Math.min(100, Math.round(22 + relevance * 10 + nameScore + rankScore + surgeScore)));
+      return { label, value };
+    })
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
+}
+
+function sectionIntentScore(label) {
+  const text = label.toLowerCase();
+  if (/(death|breaking|incident|attack|announcement|controversy|reaction|aftermath|election|trial|ranking|final|match|season|film|release)/.test(text)) return 28;
+  if (/(career|political|personal|international|background|history|early life|public image)/.test(text)) return 18;
+  return 8;
+}
+
+function fallbackSections(article, summary) {
+  const category = categoryOf(summary?.desc || "");
+  if (category === "Sport") return ["Latest matches", "Career", "International play", "Records", "Public reaction"];
+  if (category === "Power" || /politic/i.test(summary?.desc || "")) return ["Latest developments", "Political implications", "Career", "Public reaction", "Background"];
+  if (/film|television|series|album|song|music/i.test(summary?.desc || "")) return ["Release", "Cast and production", "Reception", "Plot", "Background"];
+  const title = summary?.title || articleTitle(article);
+  return [`Latest updates on ${title}`, "Background", "Public attention", "Related events", "Reception"];
+}
+
+function renderMovementSections(items) {
+  els.storySections.replaceChildren();
+  els.storySectionsWrap.hidden = items.length === 0;
+  items.forEach((item, index) => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span class="story-sections__rank">${pad(index + 1)}</span>
+      <span class="story-sections__label"></span>
+      <span class="story-sections__bar"><i style="width:${item.value}%"></i></span>
+    `;
+    li.querySelector(".story-sections__label").textContent = item.label;
+    els.storySections.append(li);
+  });
+}
+
 async function openArticle(article) {
   const hit = state.currentList.find((a) => a.article === article) || state.globalTop.find((a) => a.article === article) || { article, views: 0, rank: "-" };
   const title = hit.title || articleTitle(article);
@@ -935,12 +1007,18 @@ async function openArticle(article) {
   els.panelRank.textContent = hit.rank ? `#${hit.rank}` : "-";
   els.panelTrend.textContent = "-";
   els.panelWhy.textContent = "Reading the pulse...";
+  els.storySectionsWrap.hidden = true;
+  els.storySections.replaceChildren();
   els.panelLetter.textContent = title.charAt(0).toUpperCase();
   els.panelLetter.hidden = false;
   setBackground(els.panelImage, "");
   els.spark.hidden = true;
 
-  const [summary, series] = await Promise.all([fetchSummary(article), fetchSeries(article)]);
+  const [summary, series, sections] = await Promise.all([
+    fetchSummary(article),
+    fetchSeries(article),
+    fetchArticleSections(article)
+  ]);
   const finalTitle = summary.title || title;
   els.panelTitle.textContent = finalTitle;
   els.panelDesc.textContent = summary.desc || "";
@@ -958,9 +1036,12 @@ async function openArticle(article) {
     const paths = sparkPaths(series);
     els.sparkArea.setAttribute("d", paths.area);
     els.sparkLine.setAttribute("d", paths.line);
+    els.sparkDot.setAttribute("cx", paths.dot.x);
+    els.sparkDot.setAttribute("cy", paths.dot.y);
     els.spark.hidden = false;
   }
 
+  renderMovementSections(movementSections(article, summary, sections, series));
   renderRelated(article);
 }
 

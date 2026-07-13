@@ -10,11 +10,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/src/styles.css?v=20260713-flow-merged-ramp">
+    <link rel="stylesheet" href="/src/styles.css?v=20260713-detail-story-context">
     <script src="/vendor/d3.v7.min.js" defer></script>
     <script src="/vendor/topojson-client.min.js" defer></script>
     <script src="/data/geo.js" defer></script>
-    <script src="/src/app.js?v=20260713-flow-merged-ramp" defer></script>
+    <script src="/src/app.js?v=20260713-detail-story-context" defer></script>
   </head>
   <body>
     <header class="masthead">
@@ -96,16 +96,25 @@
         <section class="pulse-box" aria-labelledby="pulseTitle">
           <h3 id="pulseTitle">Readership over time</h3>
           <p id="panelWhy">Reading the pulse...</p>
-          <svg id="spark" viewBox="0 0 440 72" preserveAspectRatio="none" hidden>
+          <svg id="spark" viewBox="0 0 440 96" preserveAspectRatio="none" hidden>
             <path id="sparkArea"></path>
             <path id="sparkLine"></path>
+            <circle id="sparkDot" r="3.5"></circle>
           </svg>
+          <div class="spark-labels"><span>30 days ago</span><span>Yesterday</span></div>
         </section>
         <dl class="panel__meta">
           <div><dt>Views in 24h</dt><dd id="panelViews">-</dd></div>
           <div><dt>Rank</dt><dd id="panelRank">-</dd></div>
           <div><dt>Trend</dt><dd id="panelTrend">-</dd></div>
         </dl>
+        <section id="storySectionsWrap" class="story-sections" aria-labelledby="storySectionsTitle" hidden>
+          <div class="story-sections__head">
+            <h3 id="storySectionsTitle">Where the story is moving</h3>
+            <span>Sections being rewritten</span>
+          </div>
+          <ol id="storySections"></ol>
+        </section>
         <div id="relatedWrap" class="related" hidden>
           <h3>Surging alongside it</h3>
           <div id="related"></div>
