@@ -10,11 +10,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/src/styles.css?v=20260713-panel-chart">
+    <link rel="stylesheet" href="/src/styles.css?v=20260713-panel-chart-visible">
     <script src="/vendor/d3.v7.min.js" defer></script>
     <script src="/vendor/topojson-client.min.js" defer></script>
     <script src="/data/geo.js" defer></script>
-    <script src="/src/app.js?v=20260713-panel-chart" defer></script>
+    <script src="/src/app.js?v=20260713-panel-chart-visible" defer></script>
   </head>
   <body>
     <header class="masthead">
@@ -96,7 +96,7 @@
         <section class="pulse-box" aria-labelledby="pulseTitle">
           <h3 id="pulseTitle">Readership over time</h3>
           <p id="panelWhy">Reading the pulse...</p>
-          <svg id="spark" viewBox="0 0 440 96" preserveAspectRatio="none" hidden>
+          <svg id="spark" viewBox="0 0 440 96" preserveAspectRatio="none">
             <path id="sparkArea"></path>
             <path id="sparkLine"></path>
             <circle id="sparkDot" r="3.5"></circle>

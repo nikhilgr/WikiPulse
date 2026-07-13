@@ -927,6 +927,15 @@ function panelChartSeries(series, views) {
   });
 }
 
+function renderPanelChart(series) {
+  const paths = sparkPaths(series);
+  els.sparkArea.setAttribute("d", paths.area);
+  els.sparkLine.setAttribute("d", paths.line);
+  els.sparkDot.setAttribute("cx", paths.dot.x);
+  els.sparkDot.setAttribute("cy", paths.dot.y);
+  els.spark.hidden = false;
+}
+
 function trendCopy(series, views) {
   if (!series || series.length < 10) return { why: "This page has no local readership history yet.", trend: "-" };
   const values = series.map((p) => p.v);
@@ -1067,7 +1076,7 @@ async function openArticle(article) {
   els.panelLetter.textContent = title.charAt(0).toUpperCase();
   els.panelLetter.hidden = false;
   setBackground(els.panelImage, "");
-  els.spark.hidden = true;
+  renderPanelChart(panelChartSeries([], hit.views || 0));
 
   const [summary, series, activity] = await Promise.all([
     fetchSummary(article),
@@ -1088,12 +1097,7 @@ async function openArticle(article) {
   const trend = trendCopy(series, hit.views || 0);
   els.panelWhy.textContent = trend.why;
   els.panelTrend.textContent = trend.trend;
-  const paths = sparkPaths(chartSeries);
-  els.sparkArea.setAttribute("d", paths.area);
-  els.sparkLine.setAttribute("d", paths.line);
-  els.sparkDot.setAttribute("cx", paths.dot.x);
-  els.sparkDot.setAttribute("cy", paths.dot.y);
-  els.spark.hidden = false;
+  renderPanelChart(chartSeries);
 
   renderMovementSections(movementSections(article, summary, activity, series));
   renderRelated(article);
