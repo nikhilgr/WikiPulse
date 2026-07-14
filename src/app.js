@@ -273,9 +273,17 @@ function setEdition(mode, date) {
     month: "long",
     day: "numeric",
     timeZone: "UTC"
-  }).toUpperCase();
-  els.modeLabel.textContent = mode === "live" ? "Live" : "Snapshot";
-  els.dateLine.textContent = mode === "live" ? `Complete through ${label}` : label;
+  });
+  if (mode === "live") {
+    els.modeLabel.textContent = `As of ${label}`;
+    els.dateLine.textContent = "";
+    els.dateLine.hidden = true;
+    return;
+  }
+
+  els.modeLabel.textContent = "Snapshot";
+  els.dateLine.textContent = label;
+  els.dateLine.hidden = false;
 }
 
 function categoryOf(desc = "") {
