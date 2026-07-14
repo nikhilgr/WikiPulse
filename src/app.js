@@ -957,13 +957,13 @@ function trendCopy(series, views) {
   const recent = Math.max(...values.slice(-4));
   const ratio = recent / Math.max(median, 1);
   if (views > max * 3 && views > 20000) {
-    return { why: "Breaking now - today's readership is beyond anything in its 30-day history.", trend: "NEW" };
+    return { why: "Latest readership is well above its recent 30-day pattern.", trend: "NEW" };
   }
   const r = ratio >= 10 ? Math.round(ratio) : Math.round(ratio * 10) / 10;
-  if (ratio >= 4) return { why: `Surging - ${r}x its 30-day norm.`, trend: `${r}x` };
-  if (ratio >= 2) return { why: `Climbing - ${r}x its 30-day norm.`, trend: `${r}x` };
-  if (ratio >= 1.3) return { why: `Warming up - ${r}x its 30-day norm.`, trend: `${r}x` };
-  return { why: "Steady - holding near its 30-day norm.", trend: `${r}x` };
+  if (ratio >= 4) return { why: `Elevated - about ${r}x its 30-day norm.`, trend: `${r}x` };
+  if (ratio >= 2) return { why: `Rising - about ${r}x its 30-day norm.`, trend: `${r}x` };
+  if (ratio >= 1.3) return { why: `Slightly elevated - about ${r}x its 30-day norm.`, trend: `${r}x` };
+  return { why: "Near its recent 30-day norm.", trend: `${r}x` };
 }
 
 function titleCaseSection(section) {
