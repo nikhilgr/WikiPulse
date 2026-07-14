@@ -267,6 +267,8 @@ function setEdition(mode, date) {
   state.mode = mode;
   state.reportDate = date;
   const d = new Date(`${date}T12:00:00Z`);
+  const day = d.getUTCDate();
+  const suffix = day % 100 >= 11 && day % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][Math.min(day % 10, 4)] || "th";
   const label = d.toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -275,7 +277,8 @@ function setEdition(mode, date) {
     timeZone: "UTC"
   });
   if (mode === "live") {
-    els.modeLabel.textContent = `As of ${label}`;
+    const month = d.toLocaleDateString("en-US", { month: "long", timeZone: "UTC" }).toUpperCase();
+    els.modeLabel.textContent = `UPDATED ${month} ${day}${suffix}, ${d.getUTCFullYear()}`;
     els.dateLine.textContent = "";
     els.dateLine.hidden = true;
     return;
