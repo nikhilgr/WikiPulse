@@ -13,6 +13,7 @@ const REGION_LABELS = {
 const PALETTE = ["#d6361b", "#c6953a", "#6b8e6a", "#2f5d62", "#a85c8a", "#e2a93d", "#88607b", "#3a6b8a", "#b25e2a", "#5d8a6f"];
 const STOP = new Set(["about", "after", "also", "because", "between", "during", "from", "into", "over", "their", "there", "this", "that", "with", "were", "which", "while"]);
 const BAD_ARTICLE = /^(Special:|Wikipedia:|Portal:|File:|Category:|Help:|Talk:|Template:|Main_Page$|-)/;
+const SUPPRESSED_ARTICLE = /^\.?xxx$/i;
 const FLOW_STORY_COUNT = 10;
 const FLOW_LABEL_MIN = 12;
 
@@ -54,7 +55,6 @@ function bindEls() {
     heroCopy: $("#heroCopy"),
     flowCopy: $("#flowCopy"),
     controls: $("#controls"),
-    legend: $(".legend"),
     regionPills: $("#regionPills"),
     viewName: $("#viewName"),
     resetView: $("#resetView"),
@@ -97,6 +97,7 @@ const shortNumber = (n) => {
 const pad = (n) => String(n).padStart(2, "0");
 const articleTitle = (article) => (article || "").replace(/_/g, " ");
 const articleUrl = (article) => `https://en.wikipedia.org/wiki/${encodeURIComponent(article).replace(/%2F/g, "/")}`;
+const isRenderableArticle = (article) => article && !BAD_ARTICLE.test(article) && !SUPPRESSED_ARTICLE.test(articleTitle(article).trim());
 
 function showToast(message) {
   els.toast.textContent = message;
@@ -149,7 +150,7 @@ async function fetchLiveGlobal() {
       const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/top/en.wikipedia/all-access/${r.y}/${r.m}/${r.d}`;
       const data = await loadJSON(url, 4500);
       const articles = (data.items?.[0]?.articles || [])
-        .filter((a) => a.article && !BAD_ARTICLE.test(a.article))
+        .filter((a) => isRenderableArticle(a.article))
         .slice(0, 50)
         .map(normalizeTopArticle);
       if (articles.length) return { date: r.date, articles };
@@ -169,7 +170,7 @@ async function fetchCountryTop(code) {
       const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/top-per-country/${code}/all-access/${y}/${m}/${d}`;
       const data = await loadJSON(url, 5000);
       const articles = (data.items?.[0]?.articles || [])
-        .filter((a) => a.article && !BAD_ARTICLE.test(a.article))
+        .filter((a) => isRenderableArticle(a.article))
         .slice(0, 40)
         .map(normalizeTopArticle);
       if (articles.length) {
@@ -249,12 +250,12 @@ function flowEndDate() {
 }
 
 function hydrateSnapshots(global, countries, daily) {
-  for (const article of global.articles.map(normalizeTopArticle)) {
+  for (const article of global.articles.filter((item) => isRenderableArticle(item.article)).map(normalizeTopArticle)) {
     state.summaryCache.set(article.article, article);
   }
 
   for (const [code, articles] of Object.entries(countries.countries || {})) {
-    state.countryCache.set(code, articles.map(normalizeTopArticle));
+    state.countryCache.set(code, articles.filter((item) => isRenderableArticle(item.article)).map(normalizeTopArticle));
   }
 
   for (const [article, series] of Object.entries(daily.series || {})) {
@@ -266,14 +267,15 @@ function setEdition(mode, date) {
   state.mode = mode;
   state.reportDate = date;
   const d = new Date(`${date}T12:00:00Z`);
-  els.modeLabel.textContent = mode === "live" ? "Live" : "Snapshot";
-  els.dateLine.textContent = d.toLocaleDateString("en-US", {
+  const label = d.toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
     timeZone: "UTC"
   }).toUpperCase();
+  els.modeLabel.textContent = mode === "live" ? "Live" : "Snapshot";
+  els.dateLine.textContent = mode === "live" ? `Complete through ${label}` : label;
 }
 
 function categoryOf(desc = "") {
@@ -329,7 +331,7 @@ function cardTemplate(article, index, feature = false) {
 }
 
 function renderCards(list, contextLabel) {
-  const articles = (list || []).filter((a) => a.article && !BAD_ARTICLE.test(a.article)).slice(0, 50);
+  const articles = (list || []).filter((a) => isRenderableArticle(a.article)).slice(0, 50);
   state.currentList = articles;
   els.contextLabel.textContent = contextLabel;
   els.statTotal.textContent = shortNumber(articles.reduce((sum, a) => sum + (a.views || 0), 0));
@@ -713,7 +715,7 @@ async function hydrateLiveFlowSeries() {
   if (state.mode !== "live" || state.flowHydrating) return;
   const through = flowEndKey();
   if (state.flowHydratedThrough === through) return;
-  const targets = state.globalTop.slice(0, 18).filter((article) => article.article && !BAD_ARTICLE.test(article.article));
+  const targets = state.globalTop.slice(0, 18).filter((article) => isRenderableArticle(article.article));
   if (!targets.length) return;
 
   state.flowHydrating = true;
@@ -863,7 +865,6 @@ function setHeroView(view) {
   els.heroCopy.hidden = flow;
   els.flowCopy.hidden = !flow;
   els.controls.hidden = flow;
-  els.legend.hidden = flow;
   els.mapTab.classList.toggle("active", !flow);
   els.flowTab.classList.toggle("active", flow);
   els.mapTab.setAttribute("aria-selected", String(!flow));
@@ -1153,7 +1154,7 @@ async function boot() {
   hydrateSnapshots(snapshotGlobal, snapshotCountries, snapshotDaily);
 
   setEdition("snapshot", snapshotGlobal.date);
-  state.globalTop = snapshotGlobal.articles.map(normalizeTopArticle);
+  state.globalTop = snapshotGlobal.articles.filter((item) => isRenderableArticle(item.article)).map(normalizeTopArticle);
   renderCards(state.globalTop, "globally");
   showToast("Showing the saved Wikipedia snapshot.");
 
