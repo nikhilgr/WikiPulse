@@ -95,7 +95,13 @@ const shortNumber = (n) => {
 };
 
 const pad = (n) => String(n).padStart(2, "0");
-const articleTitle = (article) => (article || "").replace(/_/g, " ");
+function decodeHtml(value = "") {
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = value;
+  return textarea.value;
+}
+
+const articleTitle = (article) => decodeHtml(article || "").replace(/_/g, " ");
 const articleUrl = (article) => `https://en.wikipedia.org/wiki/${encodeURIComponent(article).replace(/%2F/g, "/")}`;
 const isRenderableArticle = (article) => article && !BAD_ARTICLE.test(article) && !SUPPRESSED_ARTICLE.test(articleTitle(article).trim());
 
@@ -299,12 +305,35 @@ function categoryOf(desc = "") {
   return "Article";
 }
 
-function setBackground(el, url) {
-  if (url) {
-    el.style.backgroundImage = `url("${url.replace(/"/g, "%22")}")`;
-  } else {
+function setBackground(el, url, fallback) {
+  const showFallback = () => {
     el.style.backgroundImage = "";
+    if (fallback) fallback.hidden = false;
+  };
+
+  if (!url) {
+    showFallback();
+    return;
   }
+
+  if (!fallback) {
+    el.style.backgroundImage = `url("${url.replace(/"/g, "%22")}")`;
+    return;
+  }
+
+  fallback.hidden = false;
+  el.dataset.imageUrl = url;
+  const img = new Image();
+  img.onload = () => {
+    if (el.dataset.imageUrl !== url) return;
+    el.style.backgroundImage = `url("${url.replace(/"/g, "%22")}")`;
+    fallback.hidden = true;
+  };
+  img.onerror = () => {
+    if (el.dataset.imageUrl !== url) return;
+    showFallback();
+  };
+  img.src = url;
 }
 
 function cardTemplate(article, index, feature = false) {
@@ -329,8 +358,8 @@ function cardTemplate(article, index, feature = false) {
   node.querySelector(".card__title").textContent = initial.title || articleTitle(initial.article);
   node.querySelector(".card__desc").textContent = feature ? (initial.extract || initial.desc || "").slice(0, 220) : initial.desc || initial.extract || "";
   const image = node.querySelector(".card__image");
-  setBackground(image, initial.img || initial.thumb);
-  if (initial.img || initial.thumb) node.querySelector(".placeholder-letter").hidden = true;
+  const letter = node.querySelector(".placeholder-letter");
+  setBackground(image, initial.img || initial.thumb, letter);
   node.addEventListener("click", () => openArticle(article.article));
   node.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -395,8 +424,7 @@ async function hydrateCard(card) {
 
   const image = card.querySelector(".card__image");
   const letter = card.querySelector(".placeholder-letter");
-  setBackground(image, summary.img || summary.thumb);
-  if (summary.img || summary.thumb) letter.hidden = true;
+  setBackground(image, summary.img || summary.thumb, letter);
   card.querySelector(".card__kicker").textContent = `${categoryOf(summary.desc || article.desc)}${card.classList.contains("feature") ? " - Most read" : ""}`;
   card.querySelector(".card__title").textContent = summary.title || article.title || articleTitle(article.article);
   card.querySelector(".card__desc").textContent = card.classList.contains("feature")
@@ -1088,7 +1116,7 @@ async function openArticle(article) {
   els.storySections.replaceChildren();
   els.panelLetter.textContent = title.charAt(0).toUpperCase();
   els.panelLetter.hidden = false;
-  setBackground(els.panelImage, "");
+  setBackground(els.panelImage, "", els.panelLetter);
   renderPanelChart(panelChartSeries([], hit.views || 0));
 
   const [summary, series, activity] = await Promise.all([
@@ -1103,8 +1131,7 @@ async function openArticle(article) {
   els.panelExtract.textContent = summary.extract || "Wikipedia has not published a summary for this article yet.";
   els.panelLink.href = summary.url || articleUrl(article);
   els.panelLetter.textContent = finalTitle.charAt(0).toUpperCase();
-  setBackground(els.panelImage, summary.img || summary.thumb);
-  els.panelLetter.hidden = !!(summary.img || summary.thumb);
+  setBackground(els.panelImage, summary.img || summary.thumb, els.panelLetter);
 
   const chartSeries = panelChartSeries(series, hit.views || 0);
   const trend = trendCopy(series, hit.views || 0);
