@@ -1078,7 +1078,8 @@ async function openArticle(article) {
   els.panelTitle.textContent = title;
   els.panelDesc.textContent = "Loading...";
   els.panelExtract.textContent = "";
-  els.panelContext.textContent = state.selectedA2 ? state.selectedName.toUpperCase() : `GLOBAL - ${state.mode.toUpperCase()}`;
+  els.panelContext.textContent = state.selectedA2 ? state.selectedName.toUpperCase() : "";
+  els.panelContext.hidden = !state.selectedA2;
   els.panelViews.textContent = shortNumber(hit.views);
   els.panelRank.textContent = hit.rank ? `#${hit.rank}` : "-";
   els.panelTrend.textContent = "-";
