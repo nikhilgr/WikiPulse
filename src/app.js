@@ -949,7 +949,7 @@ function renderPanelChart(series) {
 }
 
 function trendCopy(series, views) {
-  if (!series || series.length < 10) return { why: "This page has no local readership history yet.", trend: "-" };
+  if (!series || series.length < 10) return { why: "Breaking story with sparse historical data.", trend: "NEW" };
   const values = series.map((p) => p.v);
   const base = values.slice(0, Math.max(5, values.length - 5)).sort((a, b) => a - b);
   const median = base[Math.floor(base.length / 2)] || 1;
