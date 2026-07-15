@@ -378,7 +378,7 @@ function renderCards(list, contextLabel) {
   els.statTotal.textContent = shortNumber(articles.reduce((sum, a) => sum + (a.views || 0), 0));
   els.statArticles.textContent = String(articles.length || "-");
   els.gridStatus.textContent = articles.length ? `${articles.length} stories ranked` : "No data available";
-  els.storyJumpText.textContent = articles.length ? `${articles.length} stories ranked` : "Stories below";
+  els.storyJumpText.textContent = "Top Ranked Stories";
   els.articles.replaceChildren();
 
   if (!articles.length) {

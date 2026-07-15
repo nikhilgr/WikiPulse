@@ -266,7 +266,7 @@ footer span {
 
 .story-jump {
   position: absolute;
-  right: clamp(16px, 3vw, 44px);
+  left: 50%;
   bottom: 18px;
   z-index: 7;
   display: inline-flex;
@@ -279,6 +279,7 @@ footer span {
   box-shadow: 0 18px 44px rgba(0, 0, 0, .34);
   color: rgba(246, 241, 232, .86);
   text-decoration: none;
+  transform: translateX(-50%);
   backdrop-filter: blur(20px) saturate(130%);
 }
 
@@ -1030,6 +1031,7 @@ footer p {
     bottom: 18px;
     left: 16px;
     justify-content: center;
+    transform: none;
   }
 
   .flow-copy {
