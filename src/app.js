@@ -61,6 +61,7 @@ function bindEls() {
     contextLabel: $("#contextLabel"),
     gridStatus: $("#gridStatus"),
     articles: $("#articles"),
+    storyJumpText: $("#storyJumpText"),
     panel: $("#panel"),
     closePanel: $("#closePanel"),
     panelContext: $("#panelContext"),
@@ -377,6 +378,7 @@ function renderCards(list, contextLabel) {
   els.statTotal.textContent = shortNumber(articles.reduce((sum, a) => sum + (a.views || 0), 0));
   els.statArticles.textContent = String(articles.length || "-");
   els.gridStatus.textContent = articles.length ? `${articles.length} stories ranked` : "No data available";
+  els.storyJumpText.textContent = articles.length ? `${articles.length} stories ranked` : "Stories below";
   els.articles.replaceChildren();
 
   if (!articles.length) {
@@ -498,8 +500,8 @@ async function renderMap() {
   const rect = mount.getBoundingClientRect();
   const width = Math.max(320, rect.width);
   const height = Math.max(420, rect.height);
-  const projection = d3.geoNaturalEarth1().fitSize([width * .92, height * .96], { type: "Sphere" });
-  projection.translate([width * (width > 900 ? .56 : .5), height / 2]);
+  const projection = d3.geoNaturalEarth1().fitSize([width * (width > 900 ? .86 : .92), height * .94], { type: "Sphere" });
+  projection.translate([width * (width > 900 ? .62 : .5), height / 2]);
   const path = d3.geoPath(projection);
 
   mount.replaceChildren();

@@ -104,7 +104,7 @@ footer span {
 .hero {
   position: relative;
   min-height: 600px;
-  height: calc(100svh - 64px);
+  height: calc(100svh - 136px);
   overflow: hidden;
   border-bottom: 1px solid var(--rule);
   background: #0c0a08;
@@ -179,11 +179,12 @@ footer span {
 }
 
 .hero-card {
-  top: 50%;
+  top: auto;
+  bottom: clamp(88px, 10svh, 122px);
   left: clamp(16px, 3.4vw, 48px);
-  width: min(520px, calc(100vw - 32px));
-  transform: translateY(-50%);
-  padding: clamp(22px, 3vw, 40px);
+  width: min(430px, calc(100vw - 32px));
+  transform: none;
+  padding: clamp(22px, 2.4vw, 32px);
 }
 
 .kicker {
@@ -198,7 +199,7 @@ footer span {
 .hero-card h1 {
   margin: 0 0 22px;
   font-family: Fraunces, Georgia, serif;
-  font-size: clamp(34px, 4.6vw, 64px);
+  font-size: clamp(32px, 3.4vw, 48px);
   font-weight: 650;
   letter-spacing: 0;
   line-height: .95;
@@ -261,6 +262,39 @@ footer span {
   gap: 12px;
   width: min(360px, calc(100vw - 32px));
   padding: 16px 18px;
+}
+
+.story-jump {
+  position: absolute;
+  right: clamp(16px, 3vw, 44px);
+  bottom: 18px;
+  z-index: 7;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(246, 241, 232, .16);
+  border-radius: 999px;
+  padding: 10px 14px 10px 16px;
+  background: rgba(20, 17, 15, .72);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .34);
+  color: rgba(246, 241, 232, .86);
+  text-decoration: none;
+  backdrop-filter: blur(20px) saturate(130%);
+}
+
+.story-jump span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.story-jump i {
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(45deg) translateY(-2px);
 }
 
 .pills {
@@ -964,7 +998,7 @@ footer p {
 
   .hero {
     min-height: 640px;
-    height: calc(100svh - 64px);
+    height: calc(100svh - 118px);
   }
 
   .view-toggle {
@@ -973,6 +1007,7 @@ footer p {
 
   .hero-card {
     top: 62px;
+    bottom: auto;
     transform: none;
     padding: 22px;
   }
@@ -984,10 +1019,17 @@ footer p {
   .controls {
     top: auto;
     right: 16px;
-    bottom: 76px;
+    bottom: 88px;
     left: 16px;
     width: auto;
     padding: 14px 16px;
+  }
+
+  .story-jump {
+    right: 16px;
+    bottom: 18px;
+    left: 16px;
+    justify-content: center;
   }
 
   .flow-copy {
@@ -1036,6 +1078,7 @@ footer p {
 
   .hero {
     min-height: 680px;
+    height: calc(100svh - 104px);
   }
 
   .stats {
