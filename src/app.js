@@ -12,7 +12,7 @@ const REGION_LABELS = {
 
 const PALETTE = ["#d6361b", "#c6953a", "#6b8e6a", "#2f5d62", "#a85c8a", "#e2a93d", "#88607b", "#3a6b8a", "#b25e2a", "#5d8a6f"];
 const STOP = new Set(["about", "after", "also", "because", "between", "during", "from", "into", "over", "their", "there", "this", "that", "with", "were", "which", "while"]);
-const BAD_ARTICLE = /^(Special:|Wikipedia:|Portal:|File:|Category:|Help:|Talk:|Template:|Main_Page$|-)/;
+const BAD_ARTICLE = /^(Special:|Especial:|Wikipedia:|Portal:|File:|Archivo:|Category:|Categoría:|Help:|Ayuda:|Talk:|Discusi[oó]n:|Template:|Plantilla:|User:|Usuario:|Wikiproyecto:|Main_Page$|Portada$|-)/i;
 const SUPPRESSED_ARTICLE = /^\.?xxx$/i;
 const FLOW_STORY_COUNT = 10;
 const FLOW_LABEL_MIN = 12;
@@ -104,7 +104,10 @@ function decodeHtml(value = "") {
 }
 
 const articleTitle = (article) => decodeHtml(article || "").replace(/_/g, " ");
-const articleUrl = (article) => `https://en.wikipedia.org/wiki/${encodeURIComponent(article).replace(/%2F/g, "/")}`;
+const articleProject = (project) => project || "en.wikipedia";
+const articleKey = (article, project = "en.wikipedia") => articleProject(project) === "en.wikipedia" ? article : `${articleProject(project)}:${article}`;
+const isWikipediaProject = (project) => /^[a-z0-9-]+\.wikipedia$/i.test(articleProject(project));
+const articleUrl = (article, project = "en.wikipedia") => `https://${articleProject(project)}.org/wiki/${encodeURIComponent(article).replace(/%2F/g, "/")}`;
 const isRenderableArticle = (article) => article && !BAD_ARTICLE.test(article) && !SUPPRESSED_ARTICLE.test(articleTitle(article).trim());
 
 function showToast(message) {
@@ -139,8 +142,10 @@ function getReportCandidates() {
 }
 
 function normalizeTopArticle(item, index) {
+  const project = articleProject(item.project);
   return {
     article: item.article,
+    project,
     views: Number(item.views ?? item.views_ceil ?? 0),
     rank: Number(item.rank || index + 1),
     title: item.title || articleTitle(item.article),
@@ -148,7 +153,7 @@ function normalizeTopArticle(item, index) {
     extract: item.extract || "",
     thumb: item.thumb || "",
     img: item.img || item.thumb || "",
-    url: item.url || articleUrl(item.article)
+    url: item.url || articleUrl(item.article, project)
   };
 }
 
@@ -180,10 +185,10 @@ async function fetchCountryTop(code) {
       const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/top-per-country/${code}/all-access/${y}/${m}/${d}`;
       const data = await loadJSON(url, 5000);
       const articles = (data.items?.[0]?.articles || [])
-        .filter((a) => !a.project || a.project === "en.wikipedia")
+        .filter((a) => isWikipediaProject(a.project))
         .filter((a) => isRenderableArticle(a.article))
-        .slice(0, 40)
-        .map(normalizeTopArticle);
+        .slice(0, 50)
+        .map((article, index) => ({ ...normalizeTopArticle(article, index), rank: index + 1 }));
       if (articles.length) {
         state.countryCache.set(code, articles);
         state.countryLiveDates.set(code, state.reportDate);
@@ -197,49 +202,53 @@ async function fetchCountryTop(code) {
   return state.countryCache.get(code) || null;
 }
 
-async function fetchSummary(article) {
-  if (state.summaryCache.has(article)) return state.summaryCache.get(article);
+async function fetchSummary(article, project = "en.wikipedia") {
+  const key = articleKey(article, project);
+  if (state.summaryCache.has(key)) return state.summaryCache.get(key);
 
-  const cached = state.globalTop.find((a) => a.article === article) || state.currentList.find((a) => a.article === article);
+  const cached = state.globalTop.find((a) => articleKey(a.article, a.project) === key) || state.currentList.find((a) => articleKey(a.article, a.project) === key);
   if (cached?.extract && cached?.thumb) {
-    state.summaryCache.set(article, cached);
+    state.summaryCache.set(key, cached);
     return cached;
   }
 
   try {
-    const summary = await loadJSON(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(article)}?redirect=true`, 5000);
+    const summary = await loadJSON(`https://${articleProject(project)}.org/api/rest_v1/page/summary/${encodeURIComponent(article)}?redirect=true`, 5000);
     const out = {
       article,
+      project: articleProject(project),
       title: summary.title || articleTitle(article),
       desc: summary.description || cached?.desc || "",
       extract: summary.extract || cached?.extract || "",
       thumb: summary.thumbnail?.source || cached?.thumb || "",
       img: summary.originalimage?.source || summary.thumbnail?.source || cached?.img || "",
-      url: summary.content_urls?.desktop?.page || cached?.url || articleUrl(article)
+      url: summary.content_urls?.desktop?.page || cached?.url || articleUrl(article, project)
     };
-    state.summaryCache.set(article, out);
+    state.summaryCache.set(key, out);
     return out;
   } catch {
-    const fallback = cached || { article, title: articleTitle(article), desc: "", extract: "", url: articleUrl(article) };
-    state.summaryCache.set(article, fallback);
+    const fallback = cached || { article, project: articleProject(project), title: articleTitle(article), desc: "", extract: "", url: articleUrl(article, project) };
+    state.summaryCache.set(key, fallback);
     return fallback;
   }
 }
 
 async function fetchSeries(article, options = {}) {
-  if (state.seriesCache.has(article) && !options.forceLive) return state.seriesCache.get(article);
+  const project = articleProject(options.project);
+  const key = articleKey(article, project);
+  if (state.seriesCache.has(key) && !options.forceLive) return state.seriesCache.get(key);
 
   if (state.mode === "live") {
     try {
       const end = flowEndDate();
       const start = new Date(end.getTime() - 31 * 24 * 3600 * 1000);
       const stamp = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}00`;
-      const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/${encodeURIComponent(article)}/daily/${stamp(start)}/${stamp(end)}`;
+      const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/${project}/all-access/user/${encodeURIComponent(article)}/daily/${stamp(start)}/${stamp(end)}`;
       const data = await loadJSON(url, 5000);
       const series = (data.items || []).map((it) => ({ t: it.timestamp.slice(0, 8), v: it.views }));
       if (series.length) {
-        const merged = mergeFlowSeries(state.seriesCache.get(article) || [], series);
-        state.seriesCache.set(article, merged);
+        const merged = mergeFlowSeries(state.seriesCache.get(key) || [], series);
+        state.seriesCache.set(key, merged);
         return merged;
       }
     } catch {
@@ -247,7 +256,7 @@ async function fetchSeries(article, options = {}) {
     }
   }
 
-  return state.seriesCache.get(article) || [];
+  return state.seriesCache.get(key) || [];
 }
 
 function mergeFlowSeries(base, incoming) {
@@ -263,7 +272,7 @@ function flowEndDate() {
 
 function hydrateSnapshots(global, countries, daily) {
   for (const article of global.articles.filter((item) => isRenderableArticle(item.article)).map(normalizeTopArticle)) {
-    state.summaryCache.set(article.article, article);
+    state.summaryCache.set(articleKey(article.article, article.project), article);
   }
 
   for (const [code, articles] of Object.entries(countries.countries || {})) {
@@ -343,12 +352,14 @@ function setBackground(el, url, fallback) {
 }
 
 function cardTemplate(article, index, feature = false) {
-  const cached = state.summaryCache.get(article.article);
+  const key = articleKey(article.article, article.project);
+  const cached = state.summaryCache.get(key);
   const initial = cached ? { ...article, ...cached, views: article.views, rank: article.rank } : article;
   const node = document.createElement("article");
   node.className = feature ? "card feature" : "card";
   node.tabIndex = 0;
   node.dataset.article = article.article;
+  node.dataset.project = articleProject(article.project);
   node.innerHTML = `
     <div class="card__image">
       <span class="placeholder-letter">${(initial.title || initial.article || "W").charAt(0).toUpperCase()}</span>
@@ -366,11 +377,11 @@ function cardTemplate(article, index, feature = false) {
   const image = node.querySelector(".card__image");
   const letter = node.querySelector(".placeholder-letter");
   setBackground(image, initial.img || initial.thumb, letter);
-  node.addEventListener("click", () => openArticle(article.article));
+  node.addEventListener("click", () => openArticle(article.article, article.project));
   node.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      openArticle(article.article);
+      openArticle(article.article, article.project);
     }
   });
   return node;
@@ -425,9 +436,11 @@ async function hydrateCard(card) {
   if (!card?.isConnected || card.dataset.hydrating === "true" || card.dataset.hydrated === "true") return;
   card.dataset.hydrating = "true";
   const articleId = card.dataset.article;
-  const article = state.currentList.find((a) => a.article === articleId) || state.globalTop.find((a) => a.article === articleId) || { article: articleId };
-  const summary = await fetchSummary(articleId);
-  if (!card.isConnected || card.dataset.article !== articleId) return;
+  const project = articleProject(card.dataset.project);
+  const key = articleKey(articleId, project);
+  const article = state.currentList.find((a) => articleKey(a.article, a.project) === key) || state.globalTop.find((a) => articleKey(a.article, a.project) === key) || { article: articleId, project };
+  const summary = await fetchSummary(articleId, project);
+  if (!card.isConnected || card.dataset.article !== articleId || articleProject(card.dataset.project) !== project) return;
 
   const image = card.querySelector(".card__image");
   const letter = card.querySelector(".placeholder-letter");
@@ -467,11 +480,12 @@ function regionArticles(region) {
     if (geo.A2_TO_REGION[code] !== region) continue;
     for (const article of articles) {
       if (!isRenderableArticle(article.article)) continue;
-      const current = byArticle.get(article.article);
+      const key = articleKey(article.article, article.project);
+      const current = byArticle.get(key);
       if (current) {
         current.views += Number(article.views || 0);
       } else {
-        byArticle.set(article.article, { ...article, views: Number(article.views || 0) });
+        byArticle.set(key, { ...article, views: Number(article.views || 0) });
       }
     }
   }
@@ -822,6 +836,7 @@ function flowEndKey() {
 function getFlowCast() {
   const liveOverlap = state.globalTop.slice(0, 24).filter((article) => state.seriesCache.has(article.article));
   const fallback = [...state.seriesCache.entries()]
+    .filter(([article]) => !article.includes(".wikipedia:"))
     .map(([article, series], index) => {
       const summary = state.summaryCache.get(article) || {};
       const stats = flowSeriesStats(series);
@@ -1047,9 +1062,9 @@ function titleCaseSection(section) {
   }).join(" ");
 }
 
-async function fetchArticleActivity(article) {
+async function fetchArticleActivity(article, project = "en.wikipedia") {
   try {
-    const url = `https://en.wikipedia.org/w/api.php?action=query&prop=revisions&titles=${encodeURIComponent(article)}&rvlimit=200&rvprop=timestamp|comment&format=json&origin=*`;
+    const url = `https://${articleProject(project)}.org/w/api.php?action=query&prop=revisions&titles=${encodeURIComponent(article)}&rvlimit=200&rvprop=timestamp|comment&format=json&origin=*`;
     const data = await loadJSON(url, 4500);
     const page = Object.values(data.query?.pages || {})[0];
     const revisions = page?.revisions || [];
@@ -1141,8 +1156,10 @@ function renderMovementSections(items) {
   });
 }
 
-async function openArticle(article) {
-  const hit = state.currentList.find((a) => a.article === article) || state.globalTop.find((a) => a.article === article) || { article, views: 0, rank: "-" };
+async function openArticle(article, project = "en.wikipedia") {
+  const projectName = articleProject(project);
+  const key = articleKey(article, projectName);
+  const hit = state.currentList.find((a) => articleKey(a.article, a.project) === key) || state.globalTop.find((a) => articleKey(a.article, a.project) === key) || { article, project: projectName, views: 0, rank: "-" };
   const title = hit.title || articleTitle(article);
 
   els.panel.classList.add("open");
@@ -1164,16 +1181,16 @@ async function openArticle(article) {
   renderPanelChart(panelChartSeries([], hit.views || 0));
 
   const [summary, series, activity] = await Promise.all([
-    fetchSummary(article),
-    fetchSeries(article),
-    fetchArticleActivity(article)
+    fetchSummary(article, projectName),
+    fetchSeries(article, { project: projectName }),
+    fetchArticleActivity(article, projectName)
   ]);
   const finalTitle = summary.title || title;
   els.panelTitle.textContent = finalTitle;
   els.panelDesc.textContent = summary.desc || "";
   els.panelKicker.textContent = `${categoryOf(summary.desc)} - Trending`;
   els.panelExtract.textContent = summary.extract || "Wikipedia has not published a summary for this article yet.";
-  els.panelLink.href = summary.url || articleUrl(article);
+  els.panelLink.href = summary.url || articleUrl(article, projectName);
   els.panelLetter.textContent = finalTitle.charAt(0).toUpperCase();
   setBackground(els.panelImage, summary.img || summary.thumb, els.panelLetter);
 
@@ -1195,7 +1212,7 @@ function renderRelated(article) {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = item.title || articleTitle(item.article);
-    button.addEventListener("click", () => openArticle(item.article));
+    button.addEventListener("click", () => openArticle(item.article, item.project));
     els.related.append(button);
   }
 }
