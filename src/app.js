@@ -449,6 +449,34 @@ function renderRegionPills() {
   }
 }
 
+function syncRegionPills() {
+  $$(".pills button").forEach((button) => button.classList.toggle("active", button.dataset.region === state.region));
+}
+
+function regionArticles(region) {
+  if (region === "ALL") return state.globalTop;
+  const geo = window.WIKIPULSE_GEO;
+  const byArticle = new Map();
+
+  for (const [code, articles] of state.countryCache.entries()) {
+    if (geo.A2_TO_REGION[code] !== region) continue;
+    for (const article of articles) {
+      if (!isRenderableArticle(article.article)) continue;
+      const current = byArticle.get(article.article);
+      if (current) {
+        current.views += Number(article.views || 0);
+      } else {
+        byArticle.set(article.article, { ...article, views: Number(article.views || 0) });
+      }
+    }
+  }
+
+  return [...byArticle.values()]
+    .sort((a, b) => b.views - a.views)
+    .slice(0, 50)
+    .map((article, index) => ({ ...article, rank: index + 1 }));
+}
+
 function countryName(a2) {
   const geo = window.WIKIPULSE_GEO;
   for (const [num, code] of Object.entries(geo.NUM_TO_A2)) {
@@ -460,6 +488,8 @@ function countryName(a2) {
 function setViewGlobal() {
   state.selectedA2 = null;
   state.selectedName = "Global";
+  state.region = "ALL";
+  syncRegionPills();
   document.body.classList.remove("has-selection");
   els.viewName.textContent = "Global";
   paintMap();
@@ -473,6 +503,8 @@ async function selectCountry(a2, numericId, fallbackName) {
   }
   state.selectedA2 = a2;
   state.selectedName = countryName(a2) || fallbackName || a2;
+  state.region = "ALL";
+  syncRegionPills();
   document.body.classList.add("has-selection");
   els.viewName.textContent = state.selectedName;
   paintMap(numericId);
@@ -483,8 +515,13 @@ async function selectCountry(a2, numericId, fallbackName) {
 
 function setRegion(region) {
   state.region = region;
-  $$(".pills button").forEach((button) => button.classList.toggle("active", button.dataset.region === region));
+  state.selectedA2 = null;
+  state.selectedName = region === "ALL" ? "Global" : REGION_LABELS[region];
+  syncRegionPills();
+  document.body.classList.toggle("has-selection", region !== "ALL");
+  els.viewName.textContent = state.selectedName;
   paintMap();
+  renderCards(regionArticles(region), region === "ALL" ? "globally" : `in ${REGION_LABELS[region]}`);
 }
 
 async function renderMap() {
@@ -1210,7 +1247,9 @@ async function boot() {
     if (!global) return;
     setEdition("live", global.date);
     state.globalTop = global.articles;
-    if (!state.selectedA2) renderCards(state.globalTop, "globally");
+    if (!state.selectedA2) {
+      renderCards(regionArticles(state.region), state.region === "ALL" ? "globally" : `in ${REGION_LABELS[state.region]}`);
+    }
     state.flowReady = false;
     if (state.heroView === "flow") renderFlow();
     hydrateLiveFlowSeries();
