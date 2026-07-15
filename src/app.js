@@ -26,6 +26,7 @@ const state = {
   globalTop: [],
   currentList: [],
   countryCache: new Map(),
+  countryLiveDates: new Map(),
   summaryCache: new Map(),
   seriesCache: new Map(),
   countryNames: new Map(),
@@ -140,7 +141,7 @@ function getReportCandidates() {
 function normalizeTopArticle(item, index) {
   return {
     article: item.article,
-    views: Number(item.views || 0),
+    views: Number(item.views ?? item.views_ceil ?? 0),
     rank: Number(item.rank || index + 1),
     title: item.title || articleTitle(item.article),
     desc: item.desc || "",
@@ -169,19 +170,23 @@ async function fetchLiveGlobal() {
 }
 
 async function fetchCountryTop(code) {
-  if (state.countryCache.has(code)) return state.countryCache.get(code);
-
   if (state.mode === "live") {
+    if (state.countryLiveDates.get(code) === state.reportDate && state.countryCache.has(code)) {
+      return state.countryCache.get(code);
+    }
+
     const [y, m, d] = state.reportDate.split("-");
     try {
       const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/top-per-country/${code}/all-access/${y}/${m}/${d}`;
       const data = await loadJSON(url, 5000);
       const articles = (data.items?.[0]?.articles || [])
+        .filter((a) => !a.project || a.project === "en.wikipedia")
         .filter((a) => isRenderableArticle(a.article))
         .slice(0, 40)
         .map(normalizeTopArticle);
       if (articles.length) {
         state.countryCache.set(code, articles);
+        state.countryLiveDates.set(code, state.reportDate);
         return articles;
       }
     } catch {
