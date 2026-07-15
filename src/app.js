@@ -682,7 +682,7 @@ function renderFlow() {
   const margin = {
     top: width > 700 ? 72 : 38,
     right: width > 700 ? 44 : 18,
-    bottom: 42,
+    bottom: width > 700 ? 72 : 56,
     left: width > 700 ? 32 : 18
   };
   const stack = d3.stack().keys(keys).order(d3.stackOrderInsideOut).offset(d3.stackOffsetWiggle);
@@ -695,7 +695,7 @@ function renderFlow() {
   const yPad = Math.max(1, (yDomain[1] - yDomain[0]) * .025);
   const y = d3.scaleLinear()
     .domain([yDomain[0] - yPad, yDomain[1] + yPad])
-    .range([height - margin.bottom + (width > 700 ? 34 : 12), margin.top]);
+    .range([height - margin.bottom, margin.top]);
   const area = d3.area().x((_p, i) => x(parse(rows[i].t))).y0((p) => y(p[0])).y1((p) => y(p[1])).curve(d3.curveBasis);
 
   mount.replaceChildren();

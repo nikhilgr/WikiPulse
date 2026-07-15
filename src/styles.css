@@ -105,7 +105,7 @@ footer span {
   position: relative;
   min-height: 600px;
   height: calc(100svh - 136px);
-  overflow: hidden;
+  overflow: visible;
   border-bottom: 1px solid var(--rule);
   background: #0c0a08;
 }
@@ -115,6 +115,7 @@ footer span {
 .vignette {
   position: absolute;
   inset: 0;
+  overflow: hidden;
 }
 
 .hero__flow {
@@ -267,7 +268,7 @@ footer span {
 .story-jump {
   position: absolute;
   left: 50%;
-  bottom: 18px;
+  bottom: 0;
   z-index: 7;
   display: inline-flex;
   align-items: center;
@@ -275,11 +276,11 @@ footer span {
   border: 1px solid rgba(246, 241, 232, .16);
   border-radius: 999px;
   padding: 10px 14px 10px 16px;
-  background: rgba(20, 17, 15, .72);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, .34);
+  background: rgba(20, 17, 15, .88);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .34), 0 5px 18px rgba(20, 17, 15, .16);
   color: rgba(246, 241, 232, .86);
   text-decoration: none;
-  transform: translateX(-50%);
+  transform: translate(-50%, 50%);
   backdrop-filter: blur(20px) saturate(130%);
 }
 
