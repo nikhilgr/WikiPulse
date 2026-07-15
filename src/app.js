@@ -515,6 +515,13 @@ function setViewGlobal() {
   renderCards(state.globalTop, "globally");
 }
 
+function jumpToStories() {
+  const target = $("#stories");
+  if (!target) return;
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  target.scrollIntoView({ behavior: prefersReducedMotion ? "auto" : "smooth", block: "start" });
+}
+
 async function selectCountry(a2, numericId, fallbackName) {
   if (!a2) {
     showToast("No country code is mapped for this geography.");
@@ -530,6 +537,7 @@ async function selectCountry(a2, numericId, fallbackName) {
   showToast(`Loading what ${state.selectedName} is reading...`);
   const articles = await fetchCountryTop(a2);
   renderCards(articles, `in ${state.selectedName}`);
+  requestAnimationFrame(jumpToStories);
 }
 
 function setRegion(region) {
