@@ -1073,6 +1073,10 @@ footer p {
 @media (max-width: 560px) {
   .masthead {
     gap: 12px;
+    height: auto;
+    min-height: 64px;
+    flex-wrap: wrap;
+    padding-block: 12px;
   }
 
   #dateLine {
@@ -1080,8 +1084,99 @@ footer p {
   }
 
   .hero {
-    min-height: 680px;
-    height: calc(100svh - 104px);
+    display: flex;
+    min-height: 0;
+    height: auto;
+    flex-direction: column;
+    gap: 14px;
+    overflow: hidden;
+    padding: 16px;
+  }
+
+  .hero__map {
+    position: relative;
+    inset: auto;
+    order: 3;
+    width: 100%;
+    height: min(52svh, 420px);
+    min-height: 280px;
+    border: 1px solid rgba(246, 241, 232, .10);
+    border-radius: 8px;
+    background: rgba(20, 17, 15, .44);
+  }
+
+  .hero__flow {
+    position: relative;
+    inset: auto;
+    order: 3;
+    width: 100%;
+    height: min(58svh, 440px);
+    min-height: 320px;
+  }
+
+  .vignette {
+    display: none;
+  }
+
+  .view-toggle {
+    position: relative;
+    top: auto;
+    left: auto;
+    order: 0;
+    align-self: flex-start;
+  }
+
+  .controls {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    order: 1;
+    width: 100%;
+    padding: 14px;
+  }
+
+  .hero-card {
+    position: relative;
+    top: auto;
+    bottom: auto;
+    left: auto;
+    order: 2;
+    width: 100%;
+    padding: 20px;
+  }
+
+  .hero-card h1 {
+    margin-bottom: 18px;
+    font-size: 32px;
+  }
+
+  .hero-card p:not(.kicker) {
+    margin-bottom: 20px;
+  }
+
+  .story-jump {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    order: 4;
+    width: 100%;
+    justify-content: center;
+    transform: none;
+  }
+
+  .flow-copy {
+    position: relative;
+    top: auto;
+    left: auto;
+    order: 2;
+    max-width: none;
+  }
+
+  .tip {
+    display: none;
   }
 
   .stats {

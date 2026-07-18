@@ -117,6 +117,15 @@ function showToast(message) {
   showToast.timer = setTimeout(() => els.toast.classList.remove("show"), 2800);
 }
 
+function canHover() {
+  return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+}
+
+function hideTips() {
+  if (els.mapTip) els.mapTip.style.opacity = 0;
+  if (els.flowTip) els.flowTip.style.opacity = 0;
+}
+
 async function loadJSON(url, timeoutMs = 8000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -505,6 +514,7 @@ function countryName(a2) {
 }
 
 function setViewGlobal() {
+  hideTips();
   state.selectedA2 = null;
   state.selectedName = "Global";
   state.region = "ALL";
@@ -541,6 +551,7 @@ async function selectCountry(a2, numericId, fallbackName) {
 }
 
 function setRegion(region) {
+  hideTips();
   state.region = region;
   state.selectedA2 = null;
   state.selectedName = region === "ALL" ? "Global" : REGION_LABELS[region];
@@ -583,6 +594,7 @@ async function renderMap() {
     .attr("stroke", "rgba(246,241,232,.10)")
     .attr("stroke-width", .5)
     .on("mousemove", function (event, d) {
+      if (!canHover()) return;
       const num = this.dataset.num;
       const a2 = geo.NUM_TO_A2[num];
       const cached = a2 ? state.countryCache.get(a2) : null;
@@ -591,10 +603,11 @@ async function renderMap() {
       if (a2 !== state.selectedA2) d3.select(this).attr("fill", "#f0a48a").attr("stroke", "#f6f1e8");
     })
     .on("mouseleave", function () {
-      els.mapTip.style.opacity = 0;
+      hideTips();
       paintMap();
     })
     .on("click", function (_event, d) {
+      hideTips();
       const num = this.dataset.num;
       selectCountry(geo.NUM_TO_A2[num], num, d.properties.name);
     });
